@@ -72,4 +72,5 @@ coords.each { |tag,row|
 	out.print "#define SKIN_#{tag.upcase}_TOP #{y}\n"
 	out.print "#define SKIN_#{tag.upcase}_WIDTH #{width}\n"
 	out.print "#define SKIN_#{tag.upcase}_HEIGHT #{height}\n"
+	system("inkscape --export-id=#{tag.esc_shell} --export-id-only --export-area=#{x-2}:#{150-y-height-3}:#{x+width+2}:#{150-y+2} --export-width=#{width+4} --export-png='skin/#{tag}.png' #{svg}\n")
 }

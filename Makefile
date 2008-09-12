@@ -1,5 +1,5 @@
 # config
-SKIN=mockup.svg
+SKIN=skin.svg
 
 
 SKIN_PARTS= background next prev art save title artist star nostar trash bar slider pause
