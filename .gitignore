@@ -1,2 +1,5 @@
-skin
-mockup.png
+*.jpg
+radio
+skin/*
+skin_coords.h
+*.ogg
