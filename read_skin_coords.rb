@@ -78,8 +78,8 @@ coords.each { |tag,row|
 		# or blurs.
 		y -= 2;
 		x -= 2;
-		height += 5;
-		width += 5;
+		height += 7;
+		width += 6;
 	end
 	out.print "\n"
 	out.print "#define SKIN_#{tag.upcase}_LEFT #{x}\n"

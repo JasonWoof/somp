@@ -48,6 +48,7 @@ music_finished() {
 
 void
 draw() {
+	int i;
 	SDL_Rect dest;
 	dest.x = SKIN_BACKGROUND_LEFT; dest.y = SKIN_BACKGROUND_TOP;
 	SDL_BlitSurface(i_background, NULL, surf_screen, &dest);
@@ -63,8 +64,10 @@ draw() {
 	SDL_BlitSurface(i_title, NULL, surf_screen, &dest);
 	dest.x = SKIN_ARTIST_LEFT; dest.y = SKIN_ARTIST_TOP;
 	SDL_BlitSurface(i_artist, NULL, surf_screen, &dest);
-	dest.x = SKIN_STAR_LEFT; dest.y = SKIN_STAR_TOP;
-	SDL_BlitSurface(i_star, NULL, surf_screen, &dest);
+	for(i = 0; i < 4; ++i) {
+		dest.x = SKIN_STAR_LEFT - (i * (SKIN_NOSTAR_LEFT - SKIN_STAR_LEFT)); dest.y = SKIN_STAR_TOP;
+		SDL_BlitSurface(i_star, NULL, surf_screen, &dest);
+	}
 	dest.x = SKIN_NOSTAR_LEFT; dest.y = SKIN_NOSTAR_TOP;
 	SDL_BlitSurface(i_nostar, NULL, surf_screen, &dest);
 	dest.x = SKIN_TRASH_LEFT; dest.y = SKIN_TRASH_TOP;
@@ -89,15 +92,11 @@ SDL_Surface *
 load_image(char *filename)
 {
 	SDL_Surface *tmp, *img = NULL;
-	tmp = IMG_Load(filename);
-	if(!tmp) {
+	img = IMG_Load(filename);
+	if(!img) {
 		fputs("Couldn't find data files for skin\n", stderr);
 		exit(3);
 	}
-	return tmp; // FIXME
-	img = SDL_DisplayFormat(tmp);
-	SDL_SetAlpha(img, SDL_SRCALPHA, 100);
-	SDL_FreeSurface(tmp);
 	return img;
 }
 
