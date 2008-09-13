@@ -15,7 +15,7 @@
    sodipodi:version="0.32"
    inkscape:version="0.46"
    version="1.0"
-   sodipodi:docname="mockup.svg"
+   sodipodi:docname="skin.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    inkscape:export-filename="/home/jason/dev/paper/radio/mockup.png"
    inkscape:export-xdpi="90"
@@ -193,6 +193,26 @@
          stdDeviation="1.5572076"
          id="feGaussianBlur3826" />
     </filter>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3167"
+       id="linearGradient2442"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(2.1805586,0,0,2.1805586,-479.22577,-248.25887)"
+       x1="296.40097"
+       y1="63.113518"
+       x2="325.31189"
+       y2="45.533531" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3167"
+       id="linearGradient3215"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.7049938,0,0,1.7049938,-295.72533,-55.748006)"
+       x1="296.40097"
+       y1="63.113518"
+       x2="325.31189"
+       y2="45.533531" />
   </defs>
   <sodipodi:namedview
      id="base"
@@ -204,9 +224,9 @@
      objecttolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1"
-     inkscape:cx="332.98438"
-     inkscape:cy="66.382031"
+     inkscape:zoom="1.337846"
+     inkscape:cx="289.97675"
+     inkscape:cy="48.706634"
      inkscape:document-units="px"
      inkscape:current-layer="layer2"
      showgrid="false"
@@ -529,8 +549,14 @@
     </g>
     <path
        id="pause"
-       style="fill:url(#linearGradient3726);fill-opacity:1;stroke:#000000;stroke-width:1.31807876;stroke-linecap:round;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:1"
+       style="fill:url(#linearGradient3726);fill-opacity:1;stroke:#000000;stroke-width:1.318;stroke-linecap:round;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:1;stroke-dasharray:none"
        d="M 222.27025,13.159318 L 230.11596,13.159318 L 230.11596,54.741565 L 222.27025,54.741565 L 222.27025,13.159318 z M 238.36275,13.28603 L 246.20847,13.28603 L 246.20847,54.868277 L 238.36275,54.868277 L 238.36275,13.28603 z"
        inkscape:label="#rect3621" />
+    <path
+       sodipodi:nodetypes="cccc"
+       id="play"
+       d="M 213.65982,60.17833 L 265.35682,33.988974 L 213.65982,7.7996053 L 213.65982,60.17833 z"
+       style="opacity:1;fill:url(#linearGradient3215);fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.70070994;stroke-linecap:butt;stroke-linejoin:miter;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       inkscape:label="#path2440" />
   </g>
 </svg>

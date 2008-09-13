@@ -10,15 +10,12 @@ cflags := $(sdl-cflags) $(CFLAGS)
 
 
 
-SKIN_PARTS= background next prev art save title artist star nostar trash bar slider pause
+SKIN_PARTS= background next prev art save title artist star nostar trash bar slider pause play
 
 all: radio skin_coords.h
 
-radio: main.c .sdl_flags
+radio: main.c
 	gcc -o radio $(ldflags) $(cflags) main.c
-
-.sdl_flags:
-	sdl_config --libs --cflags > .sdl_flags || rm .sdl_flags
 
 skin_coords.h: read_skin_coords.rb $(SKIN)
 	ruby read_skin_coords.rb $(SKIN) $(SKIN_PARTS)
