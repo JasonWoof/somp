@@ -33,7 +33,10 @@
 #define STATE_STOPPED 3
 
 // GLOBALS
+Mix_Music *g_music = 0;
 int g_done = 0;
+int g_dirty = 1;
+int g_track = 0;
 int g_state = STATE_STARTING;
 SDL_Surface *surf_screen;
 SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_title, *i_artist, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over;
@@ -41,6 +44,11 @@ SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_title, *i_artis
 // make a music finished function
 void
 music_finished() {
+	SDL_Event e;
+	e.type = SDL_KEYDOWN;
+	e.key.keysym.sym = SDLK_LEFT;
+	SDL_PushEvent(&e);
+
 	printf("Music stopped.\n");
 	g_done = 1;
 	g_state = STATE_PAUSED; // FIXME this should be STATE_STARTING... I just wanted to see the display change :)
@@ -53,17 +61,32 @@ draw() {
 	dest.x = SKIN_BACKGROUND_LEFT; dest.y = SKIN_BACKGROUND_TOP;
 	SDL_BlitSurface(i_background, NULL, surf_screen, &dest);
 
-	dest.x = SKIN_NEXT_LEFT; dest.y = SKIN_NEXT_TOP;
-	SDL_BlitSurface(i_next, NULL, surf_screen, &dest);
+	if(g_track % 4 == 3) {
+		dest.x = SKIN_NEXT_OVER_LEFT; dest.y = SKIN_NEXT_OVER_TOP;
+		SDL_BlitSurface(i_next_over, NULL, surf_screen, &dest);
+	} else {
+		dest.x = SKIN_NEXT_LEFT; dest.y = SKIN_NEXT_TOP;
+		SDL_BlitSurface(i_next, NULL, surf_screen, &dest);
+	}
 
-	dest.x = SKIN_PREV_LEFT; dest.y = SKIN_PREV_TOP;
-	SDL_BlitSurface(i_prev, NULL, surf_screen, &dest);
+	if(g_track % 4 == 1) {
+		dest.x = SKIN_PREV_OVER_LEFT; dest.y = SKIN_PREV_OVER_TOP;
+		SDL_BlitSurface(i_prev_over, NULL, surf_screen, &dest);
+	} else {
+		dest.x = SKIN_PREV_LEFT; dest.y = SKIN_PREV_TOP;
+		SDL_BlitSurface(i_prev, NULL, surf_screen, &dest);
+	}
 
 	dest.x = SKIN_ART_LEFT; dest.y = SKIN_ART_TOP;
 	SDL_BlitSurface(i_art, NULL, surf_screen, &dest);
 
-	dest.x = SKIN_SAVE_LEFT; dest.y = SKIN_SAVE_TOP;
-	SDL_BlitSurface(i_save, NULL, surf_screen, &dest);
+	if(g_track % 4 == 0) {
+		dest.x = SKIN_SAVE_OVER_LEFT; dest.y = SKIN_SAVE_OVER_TOP;
+		SDL_BlitSurface(i_save_over, NULL, surf_screen, &dest);
+	} else {
+		dest.x = SKIN_SAVE_LEFT; dest.y = SKIN_SAVE_TOP;
+		SDL_BlitSurface(i_save, NULL, surf_screen, &dest);
+	}
 
 	dest.x = SKIN_TITLE_LEFT; dest.y = SKIN_TITLE_TOP;
 	SDL_BlitSurface(i_title, NULL, surf_screen, &dest);
@@ -112,7 +135,70 @@ load_image(char *filename)
 	return img;
 }
 
-int main(int argc, char **argv) {
+void
+load_skin() {
+	i_background = load_image(SKIN_PREFIX"background.png");
+	i_next = load_image(SKIN_PREFIX"next.png");
+	i_prev = load_image(SKIN_PREFIX"prev.png");
+	i_art = load_image(SKIN_PREFIX"art.png");
+	i_save = load_image(SKIN_PREFIX"save.png");
+	i_title = load_image(SKIN_PREFIX"title.png");
+	i_artist = load_image(SKIN_PREFIX"artist.png");
+	i_star = load_image(SKIN_PREFIX"star.png");
+	i_nostar = load_image(SKIN_PREFIX"nostar.png");
+	i_trash = load_image(SKIN_PREFIX"trash.png");
+	i_bar = load_image(SKIN_PREFIX"bar.png");
+	i_slider = load_image(SKIN_PREFIX"slider.png");
+	i_pause = load_image(SKIN_PREFIX"pause.png");
+	i_play = load_image(SKIN_PREFIX"play.png");
+	i_next_over = load_image(SKIN_PREFIX"next_over.png");
+	i_prev_over = load_image(SKIN_PREFIX"prev_over.png");
+	i_save_over = load_image(SKIN_PREFIX"save_over.png");
+	i_pause_over = load_image(SKIN_PREFIX"pause_over.png");
+	i_play_over = load_image(SKIN_PREFIX"play_over.png");
+}
+
+void
+mouse_moved(int x, int y) {
+	fprintf(stderr, "Mouse moved to (%i, %i)\n", x, y);
+}
+
+void
+play_next() {
+	if(g_music) {
+		Mix_FreeMusic(g_music);
+	}
+
+	g_track += 1;
+
+	if(g_track % 2) {
+		g_music = Mix_LoadMUS("test_short.ogg");
+	} else {
+		g_music = Mix_LoadMUS("test_short2.ogg");
+	}
+	if(!g_music) {
+		printf("Mix_LoadMUS(\"test_short[2].ogg\"): %s\n", Mix_GetError());
+		exit(3);
+	}
+
+	if(Mix_PlayMusic(g_music, 1) == -1) {
+		printf("Mix_PlayMusic: %s\n", Mix_GetError());
+		exit(4);
+	}
+
+	g_dirty = 1;
+
+	// let me know when the song is done.
+	Mix_HookMusicFinished(music_finished);
+
+	fprintf(stderr, "Play next song!\n");
+}
+
+int
+main(int argc, char **argv) {
+	int mouse_x, mouse_y, new_mouse_x, new_mouse_y;
+	int have_event;
+	SDL_Event e;
 	
 	// Initialize SDL
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
@@ -135,72 +221,48 @@ int main(int argc, char **argv) {
 	// Set the title bar text
 	SDL_WM_SetCaption("Open Music Radio", "OMR");
 
-	i_background = load_image(SKIN_PREFIX"background.png");
-	i_next = load_image(SKIN_PREFIX"next.png");
-	i_prev = load_image(SKIN_PREFIX"prev.png");
-	i_art = load_image(SKIN_PREFIX"art.png");
-	i_save = load_image(SKIN_PREFIX"save.png");
-	i_title = load_image(SKIN_PREFIX"title.png");
-	i_artist = load_image(SKIN_PREFIX"artist.png");
-	i_star = load_image(SKIN_PREFIX"star.png");
-	i_nostar = load_image(SKIN_PREFIX"nostar.png");
-	i_trash = load_image(SKIN_PREFIX"trash.png");
-	i_bar = load_image(SKIN_PREFIX"bar.png");
-	i_slider = load_image(SKIN_PREFIX"slider.png");
-	i_pause = load_image(SKIN_PREFIX"pause.png");
-	i_play = load_image(SKIN_PREFIX"play.png");
-	i_next_over = load_image(SKIN_PREFIX"next_over.png");
-	i_prev_over = load_image(SKIN_PREFIX"prev_over.png");
-	i_save_over = load_image(SKIN_PREFIX"save_over.png");
-	i_pause_over = load_image(SKIN_PREFIX"pause_over.png");
-	i_play_over = load_image(SKIN_PREFIX"play_over.png");
+	load_skin();
 
+	SDL_GetMouseState(&mouse_x, &mouse_y);
+	new_mouse_x = mouse_x;
+	new_mouse_y = mouse_y;
+	mouse_moved(mouse_x, mouse_y);
 
+	for(;;) {
+		have_event = 1;
+		while(have_event) {
+			switch(e.type) {
+				case SDL_QUIT: return;
+				case SDL_KEYDOWN:
+					if(e.key.keysym.sym == SDLK_q || e.key.keysym.sym == SDLK_ESCAPE) {
+						return;
+					}
 
+					if(e.key.keysym.sym == SDLK_RIGHT) {
+						play_next();
+					}
+					break;
+				case SDL_MOUSEMOTION:
+					new_mouse_x = e.motion.x;
+					new_mouse_y = e.motion.y;
+				break;
+			}
+			have_event = SDL_PollEvent(&e);
+		}
 
-	Mix_Music *music;
-	music = Mix_LoadMUS("test_short.ogg");
-	if(!music) {
-		printf("Mix_LoadMUS(\"test_short.ogg\"): %s\n", Mix_GetError());
-		return 3;
+		if(new_mouse_x != mouse_x || new_mouse_y != mouse_y) {
+			new_mouse_x = mouse_x;
+			new_mouse_y = mouse_y;
+			mouse_moved(mouse_x, mouse_y);
+		}
+
+		if(g_dirty) {
+			draw();
+		}
+
+		SDL_WaitEvent(&e);
 	}
 
-	if(Mix_PlayMusic(music, 1) == -1) {
-		printf("Mix_PlayMusic: %s\n", Mix_GetError());
-		return 4;
-	}
-
-
-	draw();
-
-	// let me know when the song is done.
-	Mix_HookMusicFinished(music_finished);
-
-	g_state = STATE_PLAYING;
-	while(g_state == STATE_PLAYING) {
-		SDL_Delay(60);
-	}
-
-	Mix_FreeMusic(music);
-
-	draw();
-
-	// delete this crap and make a loop or something
-	music = Mix_LoadMUS("test_short2.ogg");
-	if(!music) {
-		printf("Mix_LoadMUS(\"test_short2.ogg\"): %s\n", Mix_GetError());
-		return 3;
-	}
-
-	if(Mix_PlayMusic(music, 1) == -1) {
-		printf("Mix_PlayMusic: %s\n", Mix_GetError());
-		return 4;
-	}
-
-	g_state = STATE_PLAYING;
-	while(g_state == STATE_PLAYING) {
-		SDL_Delay(60);
-	}
-
+	// make the compiler happy
 	return 0;
 }
