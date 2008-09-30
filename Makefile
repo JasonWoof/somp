@@ -5,8 +5,8 @@ SKIN=skin.svg
 sdl-cflags := $(shell sdl-config --cflags)
 sdl-ldflags := $(shell sdl-config --libs)
 
-ldflags := $(sdl-ldflags) -lSDL_image -lSDL_mixer $(LDFLAGS)
-cflags := $(sdl-cflags) $(CFLAGS)
+ldflags := $(sdl-ldflags) -lSDL_image -lSDL_mixer $(LDFLAGS) -ggdb
+cflags := $(sdl-cflags) $(CFLAGS) -Wall -ggdb
 
 
 

@@ -38,9 +38,12 @@
 #define OVER_NEXT 4
 #define OVER_SAVE 5
 
+#define EVENT_MUSIC_FINISHED 1
+
 // GLOBALS
 Mix_Music *g_music = 0;
 int g_mouse_over = 0;
+int g_mouse_x, g_mouse_y;
 int g_dirty = 1;
 int g_track = 0;
 int g_state = STATE_STOPPED;
@@ -53,16 +56,15 @@ int get_state();
 void
 music_finished() {
 	SDL_Event e;
-	printf("Music stopped.\n");
+	fprintf(stderr, "Reached end of track.\n");
 
 	// Get the main loop back into action by telling it that the user hit the "next song" button
-	e.type = SDL_KEYDOWN;
-	e.key.type = SDL_KEYDOWN;
-	e.key.state = SDL_PRESSED;
-	e.key.keysym.sym = SDLK_RIGHT;
-	fprintf(stderr, "SDL_PushEvent returned %i\n", SDL_PushEvent(&e));
-
-	// TODO should I update state here?!
+	e.type = SDL_USEREVENT;
+	e.user.type = SDL_USEREVENT;
+	e.user.code = EVENT_MUSIC_FINISHED;
+	if(SDL_PushEvent(&e)) {
+		fprintf(stderr, "SDL_PushEvent() failed.\n");
+	}
 }
 
 void
@@ -147,9 +149,8 @@ draw() {
 }
 
 SDL_Surface *
-load_image(char *filename)
-{
-	SDL_Surface *tmp, *img = NULL;
+load_image(char *filename) {
+	SDL_Surface *img = NULL;
 	img = IMG_Load(filename);
 	if(!img) {
 		fputs("Couldn't find data files for skin\n", stderr);
@@ -191,21 +192,21 @@ within_2d(int x, int y, int left, int top, int width, int height) {
 }
 
 void
-mouse_moved(int x, int y) {
+mouse_moved() {
 	int mouse_over = 0;
-	if(within_2d(x, y, SKIN_PREV_LEFT, SKIN_PREV_TOP, SKIN_PREV_WIDTH, SKIN_PREV_HEIGHT)) {
+	if(within_2d(g_mouse_x, g_mouse_y, SKIN_PREV_LEFT, SKIN_PREV_TOP, SKIN_PREV_WIDTH, SKIN_PREV_HEIGHT)) {
 		mouse_over = OVER_PREV;
-	} else if(within_2d(x, y, SKIN_NEXT_LEFT, SKIN_NEXT_TOP, SKIN_NEXT_WIDTH, SKIN_NEXT_HEIGHT)) {
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_NEXT_LEFT, SKIN_NEXT_TOP, SKIN_NEXT_WIDTH, SKIN_NEXT_HEIGHT)) {
 		mouse_over = OVER_NEXT;
-	} else if(within_2d(x, y, SKIN_SAVE_LEFT, SKIN_SAVE_TOP, SKIN_SAVE_WIDTH, SKIN_SAVE_HEIGHT)) {
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_SAVE_LEFT, SKIN_SAVE_TOP, SKIN_SAVE_WIDTH, SKIN_SAVE_HEIGHT)) {
 		mouse_over = OVER_SAVE;
 	} else {
 		if(get_state() == STATE_PLAYING) {
-			if(within_2d(x, y, SKIN_PAUSE_LEFT, SKIN_PAUSE_TOP, SKIN_PAUSE_WIDTH, SKIN_PAUSE_HEIGHT)) {
+			if(within_2d(g_mouse_x, g_mouse_y, SKIN_PAUSE_LEFT, SKIN_PAUSE_TOP, SKIN_PAUSE_WIDTH, SKIN_PAUSE_HEIGHT)) {
 				mouse_over = OVER_PAUSE;
 			}
 		} else {
-			if(within_2d(x, y, SKIN_PLAY_LEFT, SKIN_PLAY_TOP, SKIN_PLAY_WIDTH, SKIN_PLAY_HEIGHT)) {
+			if(within_2d(g_mouse_x, g_mouse_y, SKIN_PLAY_LEFT, SKIN_PLAY_TOP, SKIN_PLAY_WIDTH, SKIN_PLAY_HEIGHT)) {
 				mouse_over = OVER_PLAY;
 			}
 		}
@@ -218,9 +219,15 @@ mouse_moved(int x, int y) {
 }
 
 void
+recalculate_mouseover() {
+	mouse_moved();
+}
+
+void
 play_next() {
 	if(g_music) {
 		Mix_FreeMusic(g_music);
+		g_music = 0;
 	}
 
 	g_track += 1;
@@ -249,9 +256,61 @@ play_next() {
 }
 
 void
+play_stop() {
+	if(!g_music) { return; }
+
+	set_state(STATE_STOPPED);
+	Mix_HaltMusic();
+}
+
+void
+play_pause() {
+	if(!g_music) { return; }
+
+	set_state(STATE_PAUSED);
+	Mix_PauseMusic();
+}
+
+void
+play_resume() {
+	if(!g_music) { return; }
+
+	set_state(STATE_PLAYING);
+	Mix_ResumeMusic();
+}
+
+void
+mouse_clicked(int button) {
+	switch(g_mouse_over) {
+		case OVER_PREV:
+			play_stop();
+		break;
+		case OVER_PAUSE:
+			if(get_state() == STATE_PLAYING) {
+				play_pause();
+			}
+		break;
+		case OVER_PLAY:
+			if(get_state() == STATE_PAUSED) {
+				play_resume();
+			} else if(get_state() == STATE_STOPPED) {
+				play_next();
+			}
+		break;
+		case OVER_NEXT:
+			play_next();
+		break;
+		case OVER_SAVE:
+			fprintf(stderr, "save that bad boy!"); // FIXME
+		break;
+	}
+}
+
+void
 set_state(int state) {
 	if(g_state != state) {
 		g_state = state;
+		recalculate_mouseover();
 		g_dirty = 1;
 	}
 }
@@ -263,7 +322,7 @@ get_state() {
 
 int
 main(int argc, char **argv) {
-	int mouse_x, mouse_y, new_mouse_x, new_mouse_y;
+	int new_mouse_x, new_mouse_y;
 	int have_event;
 	SDL_Event e;
 	
@@ -290,43 +349,61 @@ main(int argc, char **argv) {
 
 	load_skin();
 
-	SDL_GetMouseState(&mouse_x, &mouse_y);
-	new_mouse_x = mouse_x;
-	new_mouse_y = mouse_y;
-	mouse_moved(mouse_x, mouse_y);
+	SDL_GetMouseState(&new_mouse_x, &new_mouse_y);
 
 	play_next();
 
+	have_event = 0;
 	for(;;) {
-		have_event = 1;
 		while(have_event) {
 			switch(e.type) {
-				case SDL_QUIT: return;
+				case SDL_QUIT:
+					return 0;
 				case SDL_KEYDOWN:
-					if(e.key.keysym.sym == SDLK_q || e.key.keysym.sym == SDLK_ESCAPE) {
-						return;
-					}
-
-					if(e.key.keysym.sym == SDLK_RIGHT) {
-						if(g_track < 4) {
-							play_next();
-						} else {
-							set_state(STATE_STOPPED);
-						}
+					switch(e.key.keysym.sym) {
+						case SDLK_q:
+						case SDLK_ESCAPE:
+							return 0;
+						break;
+						case SDLK_RIGHT:
+							if(g_track < 4) {
+								play_next();
+							} else {
+								set_state(STATE_STOPPED);
+							}
+						break;
+						default:
+						break;
 					}
 					break;
 				case SDL_MOUSEMOTION:
 					new_mouse_x = e.motion.x;
 					new_mouse_y = e.motion.y;
 				break;
+				case SDL_MOUSEBUTTONDOWN:
+					new_mouse_x = e.button.x;
+					new_mouse_y = e.button.y;
+					mouse_moved(); // mouse_clicked assumes this has been called already to set g_mouse_over
+					mouse_clicked(e.button.button);
+				break;
+				case SDL_USEREVENT:
+					// fprintf(stderr, "got a user event!\n");
+					if(e.user.code == EVENT_MUSIC_FINISHED) {
+						if(get_state() == STATE_PLAYING) {
+							play_next();
+						}
+					}
+				break;
+				default:
+				break;
 			}
 			have_event = SDL_PollEvent(&e);
 		}
 
-		if(new_mouse_x != mouse_x || new_mouse_y != mouse_y) {
-			mouse_x = new_mouse_x;
-			mouse_y = new_mouse_y;
-			mouse_moved(mouse_x, mouse_y);
+		if(new_mouse_x != g_mouse_x || new_mouse_y != g_mouse_y) {
+			g_mouse_x = new_mouse_x;
+			g_mouse_y = new_mouse_y;
+			mouse_moved();
 		}
 
 		if(g_dirty) {
@@ -334,6 +411,7 @@ main(int argc, char **argv) {
 		}
 
 		SDL_WaitEvent(&e);
+		have_event = 1;
 	}
 
 	// make the compiler happy
