@@ -1,0 +1,16 @@
+=== Installing ===
+
+1) Install sdl, sdl-mixer, sdl-image and libogg if you don't have them already.
+
+2) If you want to run from somewhere other than this source directory, add
+-DSKIN_PREFIX="/path/to/skins/dir" to your cflags:
+
+export CFLAGS="$CFLAGS -DSKIN_PREFIX=\"/path/to/skins/dir\""
+
+3) Compile by running "make".
+
+4) Copy the "skin" directory to the place you specified in step 2
+
+5) Copy the "radio" binary wherever you want.
+
+Currently it expects to find the skins/ directory in the curr

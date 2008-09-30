@@ -36,7 +36,7 @@
 int g_done = 0;
 int g_state = STATE_STARTING;
 SDL_Surface *surf_screen;
-SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_title, *i_artist, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play;
+SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_title, *i_artist, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over;
 
 // make a music finished function
 void
@@ -52,30 +52,42 @@ draw() {
 	SDL_Rect dest;
 	dest.x = SKIN_BACKGROUND_LEFT; dest.y = SKIN_BACKGROUND_TOP;
 	SDL_BlitSurface(i_background, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_NEXT_LEFT; dest.y = SKIN_NEXT_TOP;
 	SDL_BlitSurface(i_next, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_PREV_LEFT; dest.y = SKIN_PREV_TOP;
 	SDL_BlitSurface(i_prev, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_ART_LEFT; dest.y = SKIN_ART_TOP;
 	SDL_BlitSurface(i_art, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_SAVE_LEFT; dest.y = SKIN_SAVE_TOP;
 	SDL_BlitSurface(i_save, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_TITLE_LEFT; dest.y = SKIN_TITLE_TOP;
 	SDL_BlitSurface(i_title, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_ARTIST_LEFT; dest.y = SKIN_ARTIST_TOP;
 	SDL_BlitSurface(i_artist, NULL, surf_screen, &dest);
+
 	for(i = 0; i < 4; ++i) {
 		dest.x = SKIN_STAR_LEFT - (i * (SKIN_NOSTAR_LEFT - SKIN_STAR_LEFT)); dest.y = SKIN_STAR_TOP;
 		SDL_BlitSurface(i_star, NULL, surf_screen, &dest);
 	}
+
 	dest.x = SKIN_NOSTAR_LEFT; dest.y = SKIN_NOSTAR_TOP;
 	SDL_BlitSurface(i_nostar, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_TRASH_LEFT; dest.y = SKIN_TRASH_TOP;
 	SDL_BlitSurface(i_trash, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_BAR_LEFT; dest.y = SKIN_BAR_TOP;
 	SDL_BlitSurface(i_bar, NULL, surf_screen, &dest);
+
 	dest.x = SKIN_SLIDER_LEFT; dest.y = SKIN_SLIDER_TOP;
 	SDL_BlitSurface(i_slider, NULL, surf_screen, &dest);
+
 	if(g_state == STATE_PLAYING || g_state == STATE_STARTING) {
 		dest.x = SKIN_PAUSE_LEFT; dest.y = SKIN_PAUSE_TOP;
 		SDL_BlitSurface(i_pause, NULL, surf_screen, &dest);
@@ -137,6 +149,13 @@ int main(int argc, char **argv) {
 	i_slider = load_image(SKIN_PREFIX"slider.png");
 	i_pause = load_image(SKIN_PREFIX"pause.png");
 	i_play = load_image(SKIN_PREFIX"play.png");
+	i_next_over = load_image(SKIN_PREFIX"next_over.png");
+	i_prev_over = load_image(SKIN_PREFIX"prev_over.png");
+	i_save_over = load_image(SKIN_PREFIX"save_over.png");
+	i_pause_over = load_image(SKIN_PREFIX"pause_over.png");
+	i_play_over = load_image(SKIN_PREFIX"play_over.png");
+
+
 
 
 	Mix_Music *music;
