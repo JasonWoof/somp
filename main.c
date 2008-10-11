@@ -18,6 +18,7 @@
 #include <SDL.h>
 #include <SDL_mixer.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -41,6 +42,7 @@
 #define EVENT_MUSIC_FINISHED 1
 
 // GLOBALS
+TTF_Font *g_track_font, *g_artist_font;
 Mix_Music *g_music = 0;
 int g_mouse_over = 0;
 int g_mouse_x, g_mouse_y;
@@ -52,6 +54,7 @@ SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_title, *i_artis
 
 void set_state(int state);
 int get_state();
+void text_draw();
 
 void
 music_finished() {
@@ -103,12 +106,6 @@ draw() {
 		SDL_BlitSurface(i_save, NULL, surf_screen, &dest);
 	}
 
-	dest.x = SKIN_TITLE_LEFT; dest.y = SKIN_TITLE_TOP;
-	SDL_BlitSurface(i_title, NULL, surf_screen, &dest);
-
-	dest.x = SKIN_ARTIST_LEFT; dest.y = SKIN_ARTIST_TOP;
-	SDL_BlitSurface(i_artist, NULL, surf_screen, &dest);
-
 	for(i = 0; i < 4; ++i) {
 		dest.x = SKIN_STAR_LEFT - (i * (SKIN_NOSTAR_LEFT - SKIN_STAR_LEFT)); dest.y = SKIN_STAR_TOP;
 		SDL_BlitSurface(i_star, NULL, surf_screen, &dest);
@@ -143,6 +140,8 @@ draw() {
 			SDL_BlitSurface(i_play, NULL, surf_screen, &dest);
 		}
 	}
+
+	text_draw();
 
 	// Update the surface
 	SDL_Flip(surf_screen);
@@ -241,12 +240,12 @@ play_next() {
 	}
 	if(!g_music) {
 		printf("Mix_LoadMUS(\"test_short[2].ogg\"): %s\n", Mix_GetError());
-		exit(3);
+		exit(4);
 	}
 
 	if(Mix_PlayMusic(g_music, 1) == -1) {
 		printf("Mix_PlayMusic: %s\n", Mix_GetError());
-		exit(4);
+		exit(5);
 	}
 
 	set_state(STATE_PLAYING);
@@ -255,6 +254,8 @@ play_next() {
 	Mix_HookMusicFinished(music_finished);
 
 	fprintf(stderr, "Starting next song.\n");
+
+	g_dirty = 1;
 }
 
 void
@@ -324,6 +325,54 @@ get_state() {
 	return g_state;
 }
 
+TTF_Font*
+font_init(char* file, int ptsize) {
+	TTF_Font* f;
+	f = TTF_OpenFont(file, ptsize);
+	if (!f){
+		fprintf(stderr, "ERROR: TTF_OpenFont() failed: %s\n", TTF_GetError());
+		exit(7);
+	}
+	return f;
+}
+
+void
+text_init() {
+	if (TTF_Init() == -1) {
+		printf("ERROR: TTF_Init() failed: %s\n", TTF_GetError());
+		exit(6);
+	}
+
+	g_track_font = font_init("FreeSerif.ttf", 20);
+	g_artist_font = font_init("FreeSerif.ttf", 18);
+}
+
+void
+text_draw() {
+	SDL_Color black = {0, 0, 0, 125};
+	SDL_Rect dest;
+	SDL_Surface *rendered;
+	if(g_track % 2) rendered = TTF_RenderText_Blended(g_track_font, "That Song, You Know", black);
+	else rendered = TTF_RenderText_Blended(g_track_font, "The \"Other\" Song", black);
+	if(!rendered) {
+		fprintf(stderr, "TTF_RenderText_Blended() failed\n");
+		exit(8);
+	}
+	dest.x = SKIN_TITLE_LEFT; dest.y = SKIN_TITLE_TOP;
+	SDL_BlitSurface(rendered, NULL, surf_screen, &dest);
+	SDL_FreeSurface(rendered);
+
+	if(g_track % 2) rendered = TTF_RenderText_Blended(g_artist_font, "by Those Guys", black);
+	else rendered = TTF_RenderText_Blended(g_artist_font, "by The Cool Dudes", black);
+	if(!rendered) {
+		fprintf(stderr, "TTF_RenderText_Blended() failed\n");
+		exit(8);
+	}
+	dest.x = SKIN_ARTIST_LEFT; dest.y = SKIN_ARTIST_TOP;
+	SDL_BlitSurface(rendered, NULL, surf_screen, &dest);
+	SDL_FreeSurface(rendered);
+}
+
 int
 main(int argc, char **argv) {
 	int new_mouse_x, new_mouse_y;
@@ -352,6 +401,8 @@ main(int argc, char **argv) {
 	SDL_WM_SetCaption("Open Music Radio", "OMR");
 
 	load_skin();
+
+	text_init();
 
 	SDL_GetMouseState(&new_mouse_x, &new_mouse_y);
 
