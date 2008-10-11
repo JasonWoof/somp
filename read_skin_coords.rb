@@ -1,5 +1,22 @@
 #!/usr/bin/ruby
 
+# Open Content Radio copyright (C) 2008 Jason Woofenden
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+
 if (ARGV.length < 2) or (ARGV[0] == '--help') or (ARGV[0] == '-h')
 	print "Usage: read_skin_coords.rb foo.svg tag1 [tag2 [...]]\n"
 	print "foo.svg is inspected for all tags specified\n"
@@ -49,6 +66,7 @@ f.each { |line|
 }
 
 if coords.length != tags.length
+	# TODO say which one is missing
 	print "ERROR: skin doesn't have all the tags it should. It must contain all these: #{tags.esc_shell}\n"
 	exit(1)
 end

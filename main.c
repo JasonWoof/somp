@@ -1,8 +1,8 @@
-/* radio copyright (C) 2008 Jason Woofenden
+/* Open Content Radio copyright (C) 2008 Jason Woofenden
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
+ * Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -67,6 +67,8 @@ music_finished() {
 	}
 }
 
+
+// TODO consider making a memory structure to hold all this
 void
 draw() {
 	int i;
@@ -279,11 +281,13 @@ play_resume() {
 	Mix_ResumeMusic();
 }
 
+
+// this function assumes that the mouse was clicked at (g_mouse_x, g_mouse_y)
 void
 mouse_clicked(int button) {
 	switch(g_mouse_over) {
 		case OVER_PREV:
-			play_stop();
+			play_next(); // FIXME
 		break;
 		case OVER_PAUSE:
 			if(get_state() == STATE_PLAYING) {
@@ -301,7 +305,7 @@ mouse_clicked(int button) {
 			play_next();
 		break;
 		case OVER_SAVE:
-			fprintf(stderr, "save that bad boy!"); // FIXME
+			fprintf(stderr, "Sorry, saving isn't implemented yet.\n"); // FIXME
 		break;
 	}
 }
@@ -383,8 +387,12 @@ main(int argc, char **argv) {
 				case SDL_MOUSEBUTTONDOWN:
 					new_mouse_x = e.button.x;
 					new_mouse_y = e.button.y;
-					mouse_moved(); // mouse_clicked assumes this has been called already to set g_mouse_over
-					mouse_clicked(e.button.button);
+					if(new_mouse_x != g_mouse_x || new_mouse_y != g_mouse_y) {
+						g_mouse_x = new_mouse_x;
+						g_mouse_y = new_mouse_y;
+						mouse_moved();
+					}
+					mouse_clicked(e.button.button); // needs mouse_moved() to be called first
 				break;
 				case SDL_USEREVENT:
 					// fprintf(stderr, "got a user event!\n");

@@ -1,8 +1,8 @@
-===  About Radio ===
+===  About Open Content Radio  (name will probably have to change later) ===
 
-This is a free software music player.
+This is a free software music player that will automatically download free
+(Creative commons or the like) music and play it for you. It will adjust the
+music to your tasts as you rate the songs it plays.
 
-The idea is a ridiculously simple and easy to use program that automatically
-downloads songs it thinks you will like and plays them for you. Only open
-content music will be played, so you are free to save songs you like and skip
-as many songs as you wish.
+Status: Very early development. The interface is starting to work, and it just
+alternates between two hard-coded test tracks.

@@ -1,16 +1,30 @@
 === Installing ===
 
-1) Install sdl, sdl-mixer, sdl-image and libogg if you don't have them already.
+== Prerequisites ==
 
-2) If you want to run from somewhere other than this source directory, add
--DSKIN_PREFIX="/path/to/skins/dir" to your cflags:
+This program has only been tested on Linux, but if you know what you're doing,
+you could probably easily compile it for just about anything.
 
-export CFLAGS="$CFLAGS -DSKIN_PREFIX=\"/path/to/skins/dir\""
+You'll need these libraries: sdl, sdl-mixer, sdl-image, libogg and libpng
 
-3) Compile by running "make".
 
-4) Copy the "skin" directory to the place you specified in step 2
+== Building ==
 
-5) Copy the "radio" binary wherever you want.
+Type "make" in this directory.
 
-Currently it expects to find the skins/ directory in the curr
+
+== Running ==
+
+Type "./radio" in this directory.
+
+
+== Editing the skin ==
+
+Prerequisites: You'll need to have inkscape and ruby installed.
+
+To change the look of the player, you can edit skin.svg in eg inkscape.
+
+You can move all the pieces around, because they are found by the build script
+by their object id.
+
+When you're done editing skin.svg run "make" to rebuild.

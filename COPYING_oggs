@@ -1,0 +1,11 @@
+The two sample tracks used for testing are:
+
+test_short.ogg the first few seconds of:
+Dewey Square from the album Surpriscording by Hugo 'Droopy' Contini
+http://www.jamendo.com/album/22837
+http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+test_short2.ogg the first few seconds of:
+for x in *.wav; do from the album #!/bin/bash by Gerador Zero
+http://www.jamendo.com/album/5220
+http://creativecommons.org/licenses/by-sa/2.5/br/
