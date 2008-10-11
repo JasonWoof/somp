@@ -339,7 +339,7 @@ main(int argc, char **argv) {
 	atexit(SDL_Quit);
 	atexit(SDL_CloseAudio);
 
-	// Initialise output with SDL_mixer
+	// Initialize output with SDL_mixer
 	if (Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, AUDIO_S16, MIX_DEFAULT_CHANNELS, 4096) < 0) {
 		fprintf(stderr, "Couldn't open SDL_mixer audio: %s\n", SDL_GetError());
 		return 2;

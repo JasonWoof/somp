@@ -2,7 +2,7 @@
 
 This is a free software music player that will automatically download free
 (Creative commons or the like) music and play it for you. It will adjust the
-music to your tasts as you rate the songs it plays.
+music to your tastes as you rate the songs it plays.
 
 Status: Very early development. The interface is starting to work, and it just
 alternates between two hard-coded test tracks.

@@ -91,7 +91,7 @@ coords.each { |tag,row|
 		y = y.floor
 		height -= y
 
-		# Either the coordinates are innacurate, or I'm rounding the wrong
+		# Either the coordinates are inaccurate, or I'm rounding the wrong
 		# way, also coordinates do not seem to include anti-aliasing pixels
 		# or blurs.
 		y -= 2;
