@@ -23,6 +23,9 @@
 #include <stdio.h>
 
 #include "skin_coords.h"
+#define SKIN_SLIDER_SPAN (SKIN_BAR_WIDTH - 2 * (SKIN_SLIDER_LEFT - SKIN_BAR_LEFT) - SKIN_SLIDER_WIDTH)
+#define SKIN_SLIDER_0_X (SKIN_SLIDER_LEFT + (SKIN_SLIDER_WIDTH / 2))
+#define SKIN_SLIDER_100_X (SKIN_SLIDER_0_X + SKIN_SLIDER_SPAN)
 
 #ifndef SKIN_PREFIX
 #define SKIN_PREFIX "skin/"
@@ -38,6 +41,7 @@
 #define OVER_PAUSE 3
 #define OVER_NEXT 4
 #define OVER_SAVE 5
+#define OVER_BAR 6
 
 #define EVENT_MUSIC_FINISHED 1
 
@@ -60,7 +64,9 @@ void text_draw();
 void
 music_finished() {
 	SDL_Event e;
+#ifdef DEBUG
 	fprintf(stderr, "Reached end of track.\n");
+#endif
 
 	// Get the main loop back into action by telling it that the user hit the "next song" button
 	e.type = SDL_USEREVENT;
@@ -98,7 +104,9 @@ track_new(char *m) {
 	t->duration = atoi(m);
 	t->rating = 0;
 
+#ifdef DEBUG
 	fprintf(stderr, "filename: %s, id: %s, title: %s, artist: %s, duration: %i\n", t->filename, t->id, t->title, t->artist, t->duration);
+#endif
 
 	t->artist_tex = 0;
 	t->title_tex = 0;
@@ -189,6 +197,7 @@ void dump_track(TrackInfo *t) {
 	fprintf(stderr, "filename: %s, id: %s, title: %s, artist: %s, duration: %i\n", t->filename, t->id, t->title, t->artist, t->duration);
 }
 
+#ifdef DEBUG
 void dump_playlist(Playlist *p) {
 	int i;
 	
@@ -201,6 +210,9 @@ void dump_playlist(Playlist *p) {
 		}
 	}
 }
+#else
+#define dump_playlist(a)
+#endif
 
 
 void
@@ -297,10 +309,10 @@ playlist_resume(Playlist *p) {
 
 // return fraction of current song that has been played (0..1)
 float
-playlist_get_progress(Playlist *p) {
+playlist_get_progress_seconds(Playlist *p) {
 	TrackInfo *track;
 	uint32_t delta;
-	uint32_t length;
+	uint32_t duration;
 
 	track = playlist_cur(p);
 
@@ -320,13 +332,52 @@ playlist_get_progress(Playlist *p) {
 	}
 
 
-	length = playlist_cur(p)->duration * 1000;
+	duration = track->duration;
 
-	if(delta >= length) {
-		return 1.0;
+	if(delta >= duration * 1000) {
+		return duration;
 	}
 	
-	return ((float)delta) / ((float) length);
+	return ((float)delta) / 1000;
+}
+
+// return fraction of current song that has been played (0..1)
+float
+playlist_get_progress_fraction(Playlist *p) {
+	TrackInfo *track;
+
+	track = playlist_cur(p);
+
+	if(!track) {
+		return 0;
+	}
+
+	return playlist_get_progress_seconds(p) / track->duration;
+}
+
+void
+playlist_seek_seconds(Playlist *p, double position) {
+	TrackInfo *t;
+	uint32_t now;
+	
+	t = playlist_cur(p);
+
+	if(!t) {
+		return;
+	}
+
+	if(position < 0.0) {
+		position = 0.0;
+	}
+
+	if(position > t->duration - 1) {
+		position = t->duration - 1;
+	}
+
+	Mix_SetMusicPosition(position);
+	now = SDL_GetTicks();
+	p->start_time = now - (position * 1000);
+	p->paused_at = now; // in case we're paused
 }
 
 
@@ -380,9 +431,7 @@ draw() {
 	dest.x = SKIN_BAR_LEFT; dest.y = SKIN_BAR_TOP;
 	SDL_BlitSurface(i_bar, NULL, surf_screen, &dest);
 
-#define SLIDER_SPAN (SKIN_BAR_LEFT + SKIN_BAR_WIDTH - 2 * (SKIN_SLIDER_LEFT - SKIN_BAR_LEFT) - SKIN_SLIDER_WIDTH)
-
-	dest.x = SKIN_SLIDER_LEFT + (SLIDER_SPAN * playlist_get_progress(g_playlist)); dest.y = SKIN_SLIDER_TOP;
+	dest.x = SKIN_SLIDER_LEFT + (SKIN_SLIDER_SPAN * playlist_get_progress_fraction(g_playlist)); dest.y = SKIN_SLIDER_TOP;
 	SDL_BlitSurface(i_slider, NULL, surf_screen, &dest);
 
 	if(get_state() == STATE_PLAYING || get_state() == STATE_STARTING) {
@@ -455,22 +504,26 @@ within_2d(int x, int y, int left, int top, int width, int height) {
 void
 mouse_moved() {
 	int mouse_over = 0;
-	if(within_2d(g_mouse_x, g_mouse_y, SKIN_PREV_LEFT, SKIN_PREV_TOP, SKIN_PREV_WIDTH, SKIN_PREV_HEIGHT)) {
+	if(within_2d(g_mouse_x, g_mouse_y, SKIN_PREV_LEFT, SKIN_PREV_TOP,
+	                                   SKIN_PREV_WIDTH, SKIN_PREV_HEIGHT)) {
 		mouse_over = OVER_PREV;
-	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_NEXT_LEFT, SKIN_NEXT_TOP, SKIN_NEXT_WIDTH, SKIN_NEXT_HEIGHT)) {
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_NEXT_LEFT, SKIN_NEXT_TOP,
+	                                          SKIN_NEXT_WIDTH, SKIN_NEXT_HEIGHT)) {
 		mouse_over = OVER_NEXT;
-	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_SAVE_LEFT, SKIN_SAVE_TOP, SKIN_SAVE_WIDTH, SKIN_SAVE_HEIGHT)) {
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_SAVE_LEFT, SKIN_SAVE_TOP,
+	                                          SKIN_SAVE_WIDTH, SKIN_SAVE_HEIGHT)) {
 		mouse_over = OVER_SAVE;
-	} else {
-		if(get_state() == STATE_PLAYING) {
-			if(within_2d(g_mouse_x, g_mouse_y, SKIN_PAUSE_LEFT, SKIN_PAUSE_TOP, SKIN_PAUSE_WIDTH, SKIN_PAUSE_HEIGHT)) {
-				mouse_over = OVER_PAUSE;
-			}
-		} else {
-			if(within_2d(g_mouse_x, g_mouse_y, SKIN_PLAY_LEFT, SKIN_PLAY_TOP, SKIN_PLAY_WIDTH, SKIN_PLAY_HEIGHT)) {
-				mouse_over = OVER_PLAY;
-			}
-		}
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_BAR_LEFT, SKIN_SLIDER_TOP,
+	                                          SKIN_BAR_WIDTH, SKIN_SLIDER_HEIGHT)) {
+		mouse_over = OVER_BAR;
+	} else if(get_state() == STATE_PLAYING &&
+	          within_2d(g_mouse_x, g_mouse_y, SKIN_PAUSE_LEFT, SKIN_PAUSE_TOP,
+			                                SKIN_PAUSE_WIDTH, SKIN_PAUSE_HEIGHT)) {
+		mouse_over = OVER_PAUSE;
+	} else if(get_state() != STATE_PLAYING &&
+	          within_2d(g_mouse_x, g_mouse_y, SKIN_PLAY_LEFT, SKIN_PLAY_TOP,
+			                                SKIN_PLAY_WIDTH, SKIN_PLAY_HEIGHT)) {
+		mouse_over = OVER_PLAY;
 	}
 
 	if(mouse_over != g_mouse_over) {
@@ -485,8 +538,25 @@ recalculate_mouseover() {
 }
 
 void
+play_seek_fraction(double position) {
+	TrackInfo *t = playlist_cur(g_playlist);
+	if(!t) {
+		fprintf(stderr, "ERROR: tried to seek, but there's no track\n");
+		return;
+	}
+	playlist_seek_seconds(g_playlist, t->duration * position);
+	g_dirty = 1;
+}
+
+void
 play_seek_delta(int delta) {
-	// FIXME seek currently playing song by delta seconds
+	TrackInfo *t = playlist_cur(g_playlist);
+	if(!t) {
+		fprintf(stderr, "ERROR: tried to seek, but there's no track\n");
+		return;
+	}
+	playlist_seek_seconds(g_playlist, playlist_get_progress_seconds(g_playlist) + delta);
+	g_dirty = 1;
 }
 
 void
@@ -494,6 +564,7 @@ play_prev() {
 	dump_playlist(g_playlist);
 	playlist_play_next(g_playlist, -1);
 	dump_playlist(g_playlist);
+	g_dirty = 1;
 }
 
 void
@@ -501,6 +572,7 @@ play_next() {
 	dump_playlist(g_playlist);
 	playlist_play_next(g_playlist, 1);
 	dump_playlist(g_playlist);
+	g_dirty = 1;
 }
 
 
@@ -513,6 +585,17 @@ play_next() {
 void
 play_pause() {
 	playlist_pause(g_playlist);
+	g_dirty = 1;
+}
+
+void
+play_toggle_paused() {
+	if(get_state() == STATE_PAUSED) {
+		playlist_resume(g_playlist);
+	} else {
+		playlist_pause(g_playlist);
+	}
+	g_dirty = 1;
 }
 
 void
@@ -526,6 +609,7 @@ play() {
 	}
 
 	dump_playlist(g_playlist);
+	g_dirty = 1;
 }
 
 
@@ -550,6 +634,18 @@ mouse_clicked(int button) {
 		case OVER_SAVE:
 			fprintf(stderr, "Sorry, saving isn't implemented yet.\n"); // FIXME
 		break;
+		case OVER_BAR: {
+			int x = g_mouse_x;
+			if(g_mouse_x <= SKIN_SLIDER_0_X) {
+				x = SKIN_SLIDER_0_X;
+			} else if(g_mouse_x >= SKIN_SLIDER_100_X) {
+				x = SKIN_SLIDER_100_X; // Note: seeking maxes out at duration-1 seconds
+			}
+#ifdef DEBUG
+			fprintf(stderr, "Seeking to %f%%\n", (((float)x - SKIN_SLIDER_0_X) / ((float)SKIN_SLIDER_SPAN)) * 100);
+#endif
+			play_seek_fraction(((float)x - SKIN_SLIDER_0_X) / ((float)SKIN_SLIDER_SPAN));
+		break; }
 	}
 }
 
@@ -657,6 +753,8 @@ main(int argc, char **argv) {
 	// Set the title bar text
 	SDL_WM_SetCaption("Open Music Radio", "OMR");
 
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+
 	load_skin();
 
 	text_init();
@@ -664,6 +762,12 @@ main(int argc, char **argv) {
 	playlist_init();
 
 	add_testing_tracks();
+
+#ifdef DEBUG
+	fprintf(stderr, "SKIN_SLIDER_SPAN: %i\n", SKIN_SLIDER_SPAN);
+	fprintf(stderr, "SKIN_SLIDER_0_X: %i\n", SKIN_SLIDER_0_X);
+	fprintf(stderr, "SKIN_SLIDER_100_X: %i\n", SKIN_SLIDER_100_X);
+#endif
 
 	SDL_GetMouseState(&new_mouse_x, &new_mouse_y);
 
@@ -683,7 +787,7 @@ main(int argc, char **argv) {
 						break;
 						case SDLK_SPACE:
 						case SDLK_p:
-							play_pause();
+							play_toggle_paused();
 						break;
 						case SDLK_RIGHT:
 							play_seek_delta(5);
@@ -710,7 +814,9 @@ main(int argc, char **argv) {
 					mouse_clicked(e.button.button); // needs mouse_moved() to be called first
 				break;
 				case SDL_USEREVENT:
-					// fprintf(stderr, "got a user event!\n");
+#ifdef DEBUG
+					fprintf(stderr, "got a user event!\n");
+#endif
 					if(e.user.code == EVENT_MUSIC_FINISHED) {
 						if(get_state() == STATE_PLAYING) {
 							play_next();
