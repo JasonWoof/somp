@@ -57,6 +57,20 @@ void set_state(int state);
 int get_state();
 void text_draw();
 
+void
+music_finished() {
+	SDL_Event e;
+	fprintf(stderr, "Reached end of track.\n");
+
+	// Get the main loop back into action by telling it that the user hit the "next song" button
+	e.type = SDL_USEREVENT;
+	e.user.type = SDL_USEREVENT;
+	e.user.code = EVENT_MUSIC_FINISHED;
+	if(SDL_PushEvent(&e)) {
+		fprintf(stderr, "SDL_PushEvent() failed.\n");
+	}
+}
+
 
 typedef struct {
 	char *meta;
@@ -228,11 +242,11 @@ playlist_cur(Playlist *p) {
 }
 
 // pass delta=1 for "next" track, delta=-1 for "prev" track
-uint8_t
+void
 playlist_play_next(Playlist *p, int delta) {
 	if(playlist_is_empty(p)) {
 		fprintf(stderr, "ERROR: playlist empty\n");
-		return 1;
+		return;
 	}
 
 	// stop playback, reclaim memory, etc
@@ -248,24 +262,17 @@ playlist_play_next(Playlist *p, int delta) {
 
 	track_play(playlist_cur(g_playlist));
 
-	return 0;
+	set_state(STATE_PLAYING);
+
+	// let me know when the song is done.
+	Mix_HookMusicFinished(music_finished);
+
+	fprintf(stderr, "Started previous song.\n");
+
+	g_dirty = 1;
 }
 
 
-
-void
-music_finished() {
-	SDL_Event e;
-	fprintf(stderr, "Reached end of track.\n");
-
-	// Get the main loop back into action by telling it that the user hit the "next song" button
-	e.type = SDL_USEREVENT;
-	e.user.type = SDL_USEREVENT;
-	e.user.code = EVENT_MUSIC_FINISHED;
-	if(SDL_PushEvent(&e)) {
-		fprintf(stderr, "SDL_PushEvent() failed.\n");
-	}
-}
 
 
 // TODO consider making a memory structure to hold all this
@@ -422,37 +429,22 @@ recalculate_mouseover() {
 }
 
 void
+play_seek_delta(int delta) {
+	// FIXME seek currently playing song by delta seconds
+}
+
+void
 play_prev() {
-	if(playlist_play_next(g_playlist, -1)) {
-		return;
-	}
-
-	set_state(STATE_PLAYING);
-
-	// let me know when the song is done.
-	Mix_HookMusicFinished(music_finished);
-
-	fprintf(stderr, "Started previous song.\n");
-
-	g_dirty = 1;
+	dump_playlist(g_playlist);
+	playlist_play_next(g_playlist, -1);
+	dump_playlist(g_playlist);
 }
 
 void
 play_next() {
 	dump_playlist(g_playlist);
-	
-	if(playlist_play_next(g_playlist, 1)) {
-		return;
-	}
-
-	set_state(STATE_PLAYING);
-
-	// let me know when the song is done.
-	Mix_HookMusicFinished(music_finished);
-
-	fprintf(stderr, "Started next song.\n");
-
-	g_dirty = 1;
+	playlist_play_next(g_playlist, 1);
+	dump_playlist(g_playlist);
 }
 
 
@@ -477,20 +469,12 @@ play() {
 	if(get_state() == STATE_PAUSED) {
 		// FIXME tell playlist about this?
 		Mix_ResumeMusic();
+		set_state(STATE_PLAYING);
 	} else {
-		if(playlist_play_next(g_playlist, 0)) {
-			return;
-		}
+		playlist_play_next(g_playlist, 0);
 	}
 
-	set_state(STATE_PLAYING);
-
-	// let me know when the song is done.
-	Mix_HookMusicFinished(music_finished);
-
-	fprintf(stderr, "Started song.\n");
-
-	g_dirty = 1;
+	dump_playlist(g_playlist);
 }
 
 
@@ -644,12 +628,15 @@ main(int argc, char **argv) {
 						case SDLK_ESCAPE:
 							return 0;
 						break;
+						case SDLK_SPACE:
+						case SDLK_p:
+							play_pause();
+						break;
 						case SDLK_RIGHT:
-							if(g_track < 4) {
-								play_next();
-							} else {
-								set_state(STATE_STOPPED);
-							}
+							play_seek_delta(5);
+						break;
+						case SDLK_LEFT:
+							play_seek_delta(-5);
 						break;
 						default:
 						break;
