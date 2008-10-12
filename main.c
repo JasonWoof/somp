@@ -46,7 +46,7 @@
 #define EVENT_MUSIC_FINISHED 1
 
 // GLOBALS
-TTF_Font *g_track_font, *g_artist_font;
+TTF_Font *g_artist_font;
 Mix_Music *g_music = 0;
 // Playlist* g_playlist defined later
 int g_mouse_over = 0;
@@ -55,7 +55,7 @@ int g_dirty = 1;
 int g_track = 0;
 int g_state = STATE_STOPPED;
 SDL_Surface *surf_screen;
-SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over;
+SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over;
 
 void set_state(int state);
 int get_state();
@@ -406,9 +406,6 @@ draw() {
 		SDL_BlitSurface(i_prev, NULL, surf_screen, &dest);
 	}
 
-	dest.x = SKIN_ART_LEFT; dest.y = SKIN_ART_TOP;
-	SDL_BlitSurface(i_art, NULL, surf_screen, &dest);
-
 	if(g_mouse_over == OVER_SAVE) {
 		dest.x = SKIN_SAVE_OVER_LEFT; dest.y = SKIN_SAVE_OVER_TOP;
 		SDL_BlitSurface(i_save_over, NULL, surf_screen, &dest);
@@ -476,7 +473,6 @@ load_skin() {
 	i_background = load_image(SKIN_PREFIX"background.png");
 	i_next = load_image(SKIN_PREFIX"next.png");
 	i_prev = load_image(SKIN_PREFIX"prev.png");
-	i_art = load_image(SKIN_PREFIX"art.png");
 	i_save = load_image(SKIN_PREFIX"save.png");
 	i_star = load_image(SKIN_PREFIX"star.png");
 	i_nostar = load_image(SKIN_PREFIX"nostar.png");
@@ -682,7 +678,6 @@ text_init() {
 		exit(6);
 	}
 
-	g_track_font = font_init("FreeSerif.ttf", 20);
 	g_artist_font = font_init("FreeSerif.ttf", 18);
 }
 
@@ -694,13 +689,13 @@ text_draw() {
 	if(!t) { return; } // FIXME do something more clever?
 
 	if(!t->title_tex) {
-		t->title_tex = TTF_RenderText_Blended(g_track_font, t->title, black);
+		t->title_tex = TTF_RenderText_Blended(g_artist_font, t->title, black);
 		if(!t->title_tex) {
 			fprintf(stderr, "TTF_RenderText_Blended(title) failed\n");
 			exit(8);
 		}
 	}
-	dest.x = SKIN_TITLE_LEFT; dest.y = SKIN_TITLE_TOP;
+	dest.x = SKIN_TITLE_LEFT + 3; dest.y = SKIN_TITLE_TOP;
 	SDL_BlitSurface(t->title_tex, NULL, surf_screen, &dest);
 
 	if(!t->artist_tex) {
@@ -710,7 +705,7 @@ text_draw() {
 			exit(8);
 		}
 	}
-	dest.x = SKIN_ARTIST_LEFT; dest.y = SKIN_ARTIST_TOP;
+	dest.x = SKIN_TITLE_LEFT + 3; dest.y = SKIN_ARTIST_TOP;
 	SDL_BlitSurface(t->artist_tex, NULL, surf_screen, &dest);
 }
 
@@ -718,11 +713,15 @@ text_draw() {
 void
 add_testing_tracks() {
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_1.ogg\000id1\000First Test Song\000First Test Artist\000254")));
+		"test_1.ogg\000id1\000Round Room\000by Phish\000254")));
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_2.ogg\000id2\000Second Test Song\000Second Test Artist\000324")));
+		"test_2.ogg\000id2\000Fee\000by Phish\000324")));
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_3.ogg\000id3\000Third Test Song\000Third Test Artist\000269")));
+		"test_3.ogg\000id3\000Bathtub Gin\000by Phish\000269")));
+	playlist_append(g_playlist, track_new(NSDUP(
+		"test_4.ogg\000id4\000Medley: Crow River Waltz-Jesu Joy Of Man's Desiring-Jack Fig\000by Leo Kottke\000436")));
+	playlist_append(g_playlist, track_new(NSDUP(
+		"test_5.ogg\000id5\000Skylife\000by Turtle Island String Quartet\000271")));
 }
 
 int

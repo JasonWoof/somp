@@ -10,7 +10,7 @@ cflags := $(sdl-cflags) $(CFLAGS) -Wall -DDEBUG
 
 
 
-SKIN_PARTS= background next prev art save title artist star nostar trash bar slider pause play next_over prev_over save_over pause_over play_over 
+SKIN_PARTS= background next prev save title artist star nostar trash bar slider pause play next_over prev_over save_over pause_over play_over 
 
 all: radio skin_coords.h
 
