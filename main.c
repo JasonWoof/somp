@@ -27,6 +27,13 @@
 #define SKIN_SLIDER_0_X (SKIN_SLIDER_LEFT + (SKIN_SLIDER_WIDTH / 2))
 #define SKIN_SLIDER_100_X (SKIN_SLIDER_0_X + SKIN_SLIDER_SPAN)
 
+#define SKIN_STAR_SPACING (SKIN_NOSTAR_LEFT - SKIN_STAR_LEFT)
+#define SKIN_STAR_1_LEFT (SKIN_STAR_LEFT - (3 * SKIN_STAR_SPACING))
+#define SKIN_STAR_2_LEFT (SKIN_STAR_LEFT - (2 * SKIN_STAR_SPACING))
+#define SKIN_STAR_3_LEFT (SKIN_STAR_LEFT - SKIN_STAR_SPACING)
+#define SKIN_STAR_4_LEFT (SKIN_STAR_LEFT)
+#define SKIN_STAR_5_LEFT (SKIN_STAR_LEFT + SKIN_STAR_SPACING)
+
 #ifndef SKIN_PREFIX
 #define SKIN_PREFIX "skin/"
 #endif
@@ -42,6 +49,12 @@
 #define OVER_NEXT 4
 #define OVER_SAVE 5
 #define OVER_BAR 6
+#define OVER_TRASH 7
+#define OVER_STAR_1 8
+#define OVER_STAR_2 9
+#define OVER_STAR_3 10
+#define OVER_STAR_4 11
+#define OVER_STAR_5 12
 
 #define EVENT_MUSIC_FINISHED 1
 
@@ -55,7 +68,7 @@ int g_dirty = 1;
 int g_track = 0;
 int g_state = STATE_STOPPED;
 SDL_Surface *surf_screen;
-SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over;
+SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over, *i_bubble_trash, *i_bubble_1, *i_bubble_2, *i_bubble_3, *i_bubble_4, *i_bubble_5;
 
 void set_state(int state);
 int get_state();
@@ -415,7 +428,7 @@ draw() {
 	}
 
 	for(i = 0; i < 4; ++i) {
-		dest.x = SKIN_STAR_LEFT - (i * (SKIN_NOSTAR_LEFT - SKIN_STAR_LEFT)); dest.y = SKIN_STAR_TOP;
+		dest.x = SKIN_STAR_LEFT - (i * SKIN_STAR_SPACING); dest.y = SKIN_STAR_TOP;
 		SDL_BlitSurface(i_star, NULL, surf_screen, &dest);
 	}
 
@@ -450,6 +463,34 @@ draw() {
 	}
 
 	text_draw();
+
+	switch(g_mouse_over) {
+		case OVER_TRASH:
+			dest.x = SKIN_BUBBLE_TRASH_LEFT; dest.y = SKIN_BUBBLE_TRASH_TOP;
+			SDL_BlitSurface(i_bubble_trash, NULL, surf_screen, &dest);
+		break;
+		case OVER_STAR_1:
+			dest.x = SKIN_BUBBLE_1_LEFT; dest.y = SKIN_BUBBLE_1_TOP;
+			SDL_BlitSurface(i_bubble_1, NULL, surf_screen, &dest);
+		break;
+		case OVER_STAR_2:
+			dest.x = SKIN_BUBBLE_2_LEFT; dest.y = SKIN_BUBBLE_2_TOP;
+			SDL_BlitSurface(i_bubble_2, NULL, surf_screen, &dest);
+		break;
+		case OVER_STAR_3:
+			dest.x = SKIN_BUBBLE_3_LEFT; dest.y = SKIN_BUBBLE_3_TOP;
+			SDL_BlitSurface(i_bubble_3, NULL, surf_screen, &dest);
+		break;
+		case OVER_STAR_4:
+			dest.x = SKIN_BUBBLE_4_LEFT; dest.y = SKIN_BUBBLE_4_TOP;
+			SDL_BlitSurface(i_bubble_4, NULL, surf_screen, &dest);
+		break;
+		case OVER_STAR_5:
+			dest.x = SKIN_BUBBLE_5_LEFT; dest.y = SKIN_BUBBLE_5_TOP;
+			SDL_BlitSurface(i_bubble_5, NULL, surf_screen, &dest);
+		break;
+	}
+
 
 	// Update the surface
 	SDL_Flip(surf_screen);
@@ -486,6 +527,12 @@ load_skin() {
 	i_save_over = load_image(SKIN_PREFIX"save_over.png");
 	i_pause_over = load_image(SKIN_PREFIX"pause_over.png");
 	i_play_over = load_image(SKIN_PREFIX"play_over.png");
+	i_bubble_trash = load_image(SKIN_PREFIX"bubble_trash.png");
+	i_bubble_1 = load_image(SKIN_PREFIX"bubble_1.png");
+	i_bubble_2 = load_image(SKIN_PREFIX"bubble_2.png");
+	i_bubble_3 = load_image(SKIN_PREFIX"bubble_3.png");
+	i_bubble_4 = load_image(SKIN_PREFIX"bubble_4.png");
+	i_bubble_5 = load_image(SKIN_PREFIX"bubble_5.png");
 }
 
 int
@@ -520,6 +567,24 @@ mouse_moved() {
 	          within_2d(g_mouse_x, g_mouse_y, SKIN_PLAY_LEFT, SKIN_PLAY_TOP,
 			                                SKIN_PLAY_WIDTH, SKIN_PLAY_HEIGHT)) {
 		mouse_over = OVER_PLAY;
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_TRASH_LEFT, SKIN_TRASH_TOP,
+			                                SKIN_TRASH_WIDTH, SKIN_TRASH_HEIGHT)) {
+		mouse_over = OVER_TRASH;
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_STAR_1_LEFT, SKIN_STAR_TOP,
+			                                SKIN_STAR_WIDTH, SKIN_STAR_HEIGHT)) {
+		mouse_over = OVER_STAR_1;
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_STAR_2_LEFT, SKIN_STAR_TOP,
+			                                SKIN_STAR_WIDTH, SKIN_STAR_HEIGHT)) {
+		mouse_over = OVER_STAR_2;
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_STAR_3_LEFT, SKIN_STAR_TOP,
+			                                SKIN_STAR_WIDTH, SKIN_STAR_HEIGHT)) {
+		mouse_over = OVER_STAR_3;
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_STAR_4_LEFT, SKIN_STAR_TOP,
+			                                SKIN_STAR_WIDTH, SKIN_STAR_HEIGHT)) {
+		mouse_over = OVER_STAR_4;
+	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_STAR_5_LEFT, SKIN_STAR_TOP,
+			                                SKIN_STAR_WIDTH, SKIN_STAR_HEIGHT)) {
+		mouse_over = OVER_STAR_5;
 	}
 
 	if(mouse_over != g_mouse_over) {

@@ -27,4 +27,7 @@ To change the look of the player, you can edit skin.svg in eg inkscape.
 You can move all the pieces around, because they are found by the build script
 by their object id.
 
+If you change the dimensions you'll need to update canvas_height and
+canvas_width in read_skin_coords.rb
+
 When you're done editing skin.svg run "make" to rebuild.
