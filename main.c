@@ -51,7 +51,7 @@ int g_dirty = 1;
 int g_track = 0;
 int g_state = STATE_STOPPED;
 SDL_Surface *surf_screen;
-SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_title, *i_artist, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over;
+SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over;
 
 void set_state(int state);
 int get_state();
@@ -159,6 +159,8 @@ typedef struct {
 	TrackInfo *tracks[PLAYLIST_SIZE];
 	int cur;
 	int length;
+	uint32_t start_time;
+	uint32_t paused_at;
 } Playlist;
 
 Playlist*
@@ -175,6 +177,8 @@ playlist_new() {
 	}
 	p->cur = 0;
 	p->length = 0;
+	p->start_time = 0;
+	p->paused_at = 0;
 
 	return p;
 }
@@ -255,23 +259,75 @@ playlist_play_next(Playlist *p, int delta) {
 	p->cur += delta; // next/prev track
 	p->cur = (p->cur + p->length) % p->length; // loop at the ends
 
-	// FIXME delete this debug output
+#ifdef DEBUG
 	if(p->cur == 0 && delta == 1) {
 		fprintf(stderr, "End of playlist. Playing first track again.\n");
 	}
+#endif
 
 	track_play(playlist_cur(g_playlist));
+
+	p->start_time = SDL_GetTicks();
 
 	set_state(STATE_PLAYING);
 
 	// let me know when the song is done.
 	Mix_HookMusicFinished(music_finished);
 
+#ifdef DEBUG
 	fprintf(stderr, "Started previous song.\n");
+#endif
 
 	g_dirty = 1;
 }
 
+void
+playlist_pause(Playlist *p) {
+	set_state(STATE_PAUSED);
+	Mix_PauseMusic();
+	p->paused_at = SDL_GetTicks();
+}
+
+void
+playlist_resume(Playlist *p) {
+	Mix_ResumeMusic();
+	set_state(STATE_PLAYING);
+	p->start_time += SDL_GetTicks() - p->paused_at;
+}
+
+// return fraction of current song that has been played (0..1)
+float
+playlist_get_progress(Playlist *p) {
+	TrackInfo *track;
+	uint32_t delta;
+	uint32_t length;
+
+	track = playlist_cur(p);
+
+	if(!track) {
+		return 0;
+	}
+
+	switch(get_state()) {
+		case STATE_PLAYING:
+			delta = SDL_GetTicks() - p->start_time;
+		break;
+		case STATE_PAUSED:
+			delta = p->paused_at - p->start_time;
+		break;
+		default:
+			return 0.0;
+	}
+
+
+	length = playlist_cur(p)->duration * 1000;
+
+	if(delta >= length) {
+		return 1.0;
+	}
+	
+	return ((float)delta) / ((float) length);
+}
 
 
 
@@ -324,7 +380,9 @@ draw() {
 	dest.x = SKIN_BAR_LEFT; dest.y = SKIN_BAR_TOP;
 	SDL_BlitSurface(i_bar, NULL, surf_screen, &dest);
 
-	dest.x = SKIN_SLIDER_LEFT; dest.y = SKIN_SLIDER_TOP;
+#define SLIDER_SPAN (SKIN_BAR_LEFT + SKIN_BAR_WIDTH - 2 * (SKIN_SLIDER_LEFT - SKIN_BAR_LEFT) - SKIN_SLIDER_WIDTH)
+
+	dest.x = SKIN_SLIDER_LEFT + (SLIDER_SPAN * playlist_get_progress(g_playlist)); dest.y = SKIN_SLIDER_TOP;
 	SDL_BlitSurface(i_slider, NULL, surf_screen, &dest);
 
 	if(get_state() == STATE_PLAYING || get_state() == STATE_STARTING) {
@@ -371,8 +429,6 @@ load_skin() {
 	i_prev = load_image(SKIN_PREFIX"prev.png");
 	i_art = load_image(SKIN_PREFIX"art.png");
 	i_save = load_image(SKIN_PREFIX"save.png");
-	i_title = load_image(SKIN_PREFIX"title.png");
-	i_artist = load_image(SKIN_PREFIX"artist.png");
 	i_star = load_image(SKIN_PREFIX"star.png");
 	i_nostar = load_image(SKIN_PREFIX"nostar.png");
 	i_trash = load_image(SKIN_PREFIX"trash.png");
@@ -448,18 +504,15 @@ play_next() {
 }
 
 
-// FIXME tell playlist about this?
-void
-play_stop() {
-	set_state(STATE_STOPPED);
-	Mix_HaltMusic();
-}
+//void
+//play_stop() {
+//	set_state(STATE_STOPPED);
+//	Mix_HaltMusic();
+//}
 
-// FIXME tell playlist about this?
 void
 play_pause() {
-	set_state(STATE_PAUSED);
-	Mix_PauseMusic();
+	playlist_pause(g_playlist);
 }
 
 void
@@ -467,9 +520,7 @@ play() {
 	dump_playlist(g_playlist);
 
 	if(get_state() == STATE_PAUSED) {
-		// FIXME tell playlist about this?
-		Mix_ResumeMusic();
-		set_state(STATE_PLAYING);
+		playlist_resume(g_playlist);
 	} else {
 		playlist_play_next(g_playlist, 0);
 	}
@@ -502,6 +553,7 @@ mouse_clicked(int button) {
 	}
 }
 
+// only call from within playlist_*()
 void
 set_state(int state) {
 	if(g_state != state) {
@@ -581,6 +633,7 @@ int
 main(int argc, char **argv) {
 	int new_mouse_x, new_mouse_y;
 	int have_event;
+	int i;
 	SDL_Event e;
 	
 	// Initialize SDL
@@ -680,7 +733,24 @@ main(int argc, char **argv) {
 			draw();
 		}
 
-		SDL_WaitEvent(&e);
+		// if we're playing, we need to be updating the progress bar
+		if(get_state() == STATE_PLAYING) {
+			have_event = 0;
+			i = 0;
+			for(i = 0; !have_event; ++i) {
+				have_event = SDL_PollEvent(&e);
+				if(!have_event) {
+					SDL_Delay(50);
+					if(i % 14) {
+						g_dirty = 1;
+						draw();
+					}
+				}
+			}
+		} else {
+			SDL_WaitEvent(&e);
+		}
+
 		have_event = 1;
 	}
 

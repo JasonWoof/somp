@@ -155,7 +155,8 @@
        x1="175.45"
        y1="92.427605"
        x2="190.31934"
-       y2="80.180099" />
+       y2="80.180099"
+       gradientTransform="translate(-43.813954,0.2280678)" />
     <linearGradient
        inkscape:collect="always"
        xlink:href="#linearGradient3167"
@@ -244,18 +245,22 @@
      objecttolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.337846"
-     inkscape:cx="299.21775"
-     inkscape:cy="48.706634"
+     inkscape:zoom="1"
+     inkscape:cx="143.6472"
+     inkscape:cy="69.200448"
      inkscape:document-units="px"
-     inkscape:current-layer="layer3"
+     inkscape:current-layer="g3664"
      showgrid="false"
      inkscape:window-width="1022"
      inkscape:window-height="737"
      inkscape:window-x="0"
      inkscape:window-y="0"
      showguides="true"
-     inkscape:guide-bbox="true" />
+     inkscape:guide-bbox="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid2457" />
+  </sodipodi:namedview>
   <metadata
      id="metadata7">
     <rdf:RDF>
@@ -549,19 +554,19 @@
        transform="translate(0,-3)">
       <rect
          ry="1.9436585"
-         rx="3.1509953"
-         y="83.294449"
-         x="128"
+         rx="2.3581834"
+         y="83.560074"
+         x="127.86787"
          height="3.9248779"
-         width="352.49219"
+         width="352.62433"
          id="bar"
          style="opacity:1;fill:#cacaca;fill-opacity:1;stroke:#000000;stroke-width:0.69999999;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
          inkscape:label="#rect3562" />
       <rect
          ry="2.364382"
          rx="2.727397"
-         y="74.439217"
-         x="176"
+         y="74.667282"
+         x="132.18602"
          height="21.710457"
          width="9.1933489"
          id="slider"
