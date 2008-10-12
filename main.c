@@ -44,6 +44,7 @@
 // GLOBALS
 TTF_Font *g_track_font, *g_artist_font;
 Mix_Music *g_music = 0;
+// Playlist* g_playlist defined later
 int g_mouse_over = 0;
 int g_mouse_x, g_mouse_y;
 int g_dirty = 1;
@@ -55,6 +56,202 @@ SDL_Surface *i_background, *i_next, *i_prev, *i_art, *i_save, *i_title, *i_artis
 void set_state(int state);
 int get_state();
 void text_draw();
+
+
+typedef struct {
+	char *meta;
+	char *filename, *id, *title, *artist;
+	int duration, rating;
+	SDL_Surface *artist_tex, *title_tex; // used by text rendering
+	Mix_Music *audio;
+} TrackInfo;
+
+// Pass a pointer that should be free()ed when this TrackInfo is deleted
+// Make sure there are at least 5 nulls in it
+TrackInfo*
+track_new(char *m) {
+	TrackInfo *t;
+	t = (TrackInfo*) malloc(sizeof(TrackInfo));
+	if(!t) {
+		fprintf(stderr, "Failed to allocate memory for a TrackInfo object");
+		exit(9);
+	}
+	t->meta = m;
+	t->filename = m;   m += strlen(m) + 1;
+	t->id = m;         m += strlen(m) + 1;
+	t->title = m;      m += strlen(m) + 1;
+	t->artist = m;     m += strlen(m) + 1;
+	t->duration = atoi(m);
+	t->rating = 0;
+
+	fprintf(stderr, "filename: %s, id: %s, title: %s, artist: %s, duration: %i\n", t->filename, t->id, t->title, t->artist, t->duration);
+
+	t->artist_tex = 0;
+	t->title_tex = 0;
+	t->audio = 0;
+
+	return t;
+}
+
+// delete what can be re-created
+void
+track_cleanup(TrackInfo *t) {
+	if(t->artist_tex) {
+		SDL_FreeSurface(t->artist_tex);
+		t->artist_tex = 0;
+	}
+
+	if(t->title_tex) {
+		SDL_FreeSurface(t->title_tex);
+		t->title_tex = 0;
+	}
+
+	if(t->audio) {
+		Mix_FreeMusic(t->audio);
+		t->audio = 0;
+	}
+}
+
+void
+track_delete(TrackInfo *t) {
+	track_cleanup(t);
+	free(t->meta);
+	free(t);
+}
+
+void
+track_play(TrackInfo *t) {
+	if(!t->audio) {
+		t->audio = Mix_LoadMUS(t->filename);
+		if(!t->audio) {
+			printf("ERROR: Mix_LoadMUS(\"%s\") failed with message: \"%s\"\n", t->filename, Mix_GetError());
+			exit(4);
+		}
+	}
+
+	if(Mix_PlayMusic(t->audio, 1) == -1) {
+		printf("ERROR: Mix_PlayMusic() failed with message: \"%s\"\n", Mix_GetError());
+		exit(5);
+	}
+}
+
+
+
+
+// don't you dare use this outside playlist_*
+#define PLAYLIST_SIZE 10
+
+typedef struct {
+	TrackInfo *tracks[PLAYLIST_SIZE];
+	int cur;
+	int length;
+} Playlist;
+
+Playlist*
+playlist_new() {
+	int i;
+	Playlist *p = (Playlist*) malloc(sizeof(Playlist));
+	if(!p) {
+		fprintf(stderr, "Failed to allocate memory for playlist structure\n");
+		exit(11);
+	}
+	
+	for(i = 0; i < PLAYLIST_SIZE; ++i) {
+		p->tracks[i] = 0;
+	}
+	p->cur = 0;
+	p->length = 0;
+
+	return p;
+}
+
+Playlist* g_playlist = 0;
+
+void dump_track(TrackInfo *t) {
+	fprintf(stderr, "filename: %s, id: %s, title: %s, artist: %s, duration: %i\n", t->filename, t->id, t->title, t->artist, t->duration);
+}
+
+void dump_playlist(Playlist *p) {
+	int i;
+	
+	fprintf(stderr, "Playlist: cur=%i, length=%i\n", p->cur, p->length);
+
+	for(i = 0; i < PLAYLIST_SIZE; ++i) {
+		if(p->tracks[i]) {
+			fprintf(stderr, "    track %i: ", i);
+			dump_track(p->tracks[i]);
+		}
+	}
+}
+
+
+void
+playlist_init() {
+	g_playlist = playlist_new();
+}
+
+void
+playlist_delete(Playlist *p) {
+	int i;
+	
+	for(i = 0; i < PLAYLIST_SIZE; ++i) {
+		if(p->tracks[i]) {
+			track_delete(p->tracks[i]);
+		}
+	}
+
+	free(p);
+}
+
+uint8_t
+playlist_is_empty(Playlist *p) {
+	if(p->length == 0) {
+		return 1;
+	}
+
+	return 0;
+}
+
+void
+playlist_append(Playlist *p, TrackInfo *t) {
+	if(p->length == PLAYLIST_SIZE) {
+		fprintf(stderr, "Tried to add more tracks than are supported.\n");
+		exit(10);
+	}
+	p->tracks[p->length] = t;
+	p->length += 1;
+}
+
+TrackInfo *
+playlist_cur(Playlist *p) {
+	return p->tracks[p->cur];
+}
+
+// pass delta=1 for "next" track, delta=-1 for "prev" track
+uint8_t
+playlist_play_next(Playlist *p, int delta) {
+	if(playlist_is_empty(p)) {
+		fprintf(stderr, "ERROR: playlist empty\n");
+		return 1;
+	}
+
+	// stop playback, reclaim memory, etc
+	track_cleanup(playlist_cur(g_playlist));
+
+	p->cur += delta; // next/prev track
+	p->cur = (p->cur + p->length) % p->length; // loop at the ends
+
+	// FIXME delete this debug output
+	if(p->cur == 0 && delta == 1) {
+		fprintf(stderr, "End of playlist. Playing first track again.\n");
+	}
+
+	track_play(playlist_cur(g_playlist));
+
+	return 0;
+}
+
+
 
 void
 music_finished() {
@@ -225,27 +422,9 @@ recalculate_mouseover() {
 }
 
 void
-play_next() {
-	if(g_music) {
-		Mix_FreeMusic(g_music);
-		g_music = 0;
-	}
-
-	g_track += 1;
-
-	if(g_track % 2) {
-		g_music = Mix_LoadMUS("test_short.ogg");
-	} else {
-		g_music = Mix_LoadMUS("test_short2.ogg");
-	}
-	if(!g_music) {
-		printf("Mix_LoadMUS(\"test_short[2].ogg\"): %s\n", Mix_GetError());
-		exit(4);
-	}
-
-	if(Mix_PlayMusic(g_music, 1) == -1) {
-		printf("Mix_PlayMusic: %s\n", Mix_GetError());
-		exit(5);
+play_prev() {
+	if(playlist_play_next(g_playlist, -1)) {
+		return;
 	}
 
 	set_state(STATE_PLAYING);
@@ -253,33 +432,65 @@ play_next() {
 	// let me know when the song is done.
 	Mix_HookMusicFinished(music_finished);
 
-	fprintf(stderr, "Starting next song.\n");
+	fprintf(stderr, "Started previous song.\n");
 
 	g_dirty = 1;
 }
 
 void
-play_stop() {
-	if(!g_music) { return; }
+play_next() {
+	dump_playlist(g_playlist);
+	
+	if(playlist_play_next(g_playlist, 1)) {
+		return;
+	}
 
+	set_state(STATE_PLAYING);
+
+	// let me know when the song is done.
+	Mix_HookMusicFinished(music_finished);
+
+	fprintf(stderr, "Started next song.\n");
+
+	g_dirty = 1;
+}
+
+
+// FIXME tell playlist about this?
+void
+play_stop() {
 	set_state(STATE_STOPPED);
 	Mix_HaltMusic();
 }
 
+// FIXME tell playlist about this?
 void
 play_pause() {
-	if(!g_music) { return; }
-
 	set_state(STATE_PAUSED);
 	Mix_PauseMusic();
 }
 
 void
-play_resume() {
-	if(!g_music) { return; }
+play() {
+	dump_playlist(g_playlist);
+
+	if(get_state() == STATE_PAUSED) {
+		// FIXME tell playlist about this?
+		Mix_ResumeMusic();
+	} else {
+		if(playlist_play_next(g_playlist, 0)) {
+			return;
+		}
+	}
 
 	set_state(STATE_PLAYING);
-	Mix_ResumeMusic();
+
+	// let me know when the song is done.
+	Mix_HookMusicFinished(music_finished);
+
+	fprintf(stderr, "Started song.\n");
+
+	g_dirty = 1;
 }
 
 
@@ -288,7 +499,7 @@ void
 mouse_clicked(int button) {
 	switch(g_mouse_over) {
 		case OVER_PREV:
-			play_next(); // FIXME
+			play_prev();
 		break;
 		case OVER_PAUSE:
 			if(get_state() == STATE_PLAYING) {
@@ -296,11 +507,7 @@ mouse_clicked(int button) {
 			}
 		break;
 		case OVER_PLAY:
-			if(get_state() == STATE_PAUSED) {
-				play_resume();
-			} else if(get_state() == STATE_STOPPED) {
-				play_next();
-			}
+			play();
 		break;
 		case OVER_NEXT:
 			play_next();
@@ -351,26 +558,39 @@ void
 text_draw() {
 	SDL_Color black = {0, 0, 0, 125};
 	SDL_Rect dest;
-	SDL_Surface *rendered;
-	if(g_track % 2) rendered = TTF_RenderText_Blended(g_track_font, "That Song, You Know", black);
-	else rendered = TTF_RenderText_Blended(g_track_font, "The \"Other\" Song", black);
-	if(!rendered) {
-		fprintf(stderr, "TTF_RenderText_Blended() failed\n");
-		exit(8);
+	TrackInfo *t = playlist_cur(g_playlist);
+	if(!t) { return; } // FIXME do something more clever?
+
+	if(!t->title_tex) {
+		t->title_tex = TTF_RenderText_Blended(g_track_font, t->title, black);
+		if(!t->title_tex) {
+			fprintf(stderr, "TTF_RenderText_Blended(title) failed\n");
+			exit(8);
+		}
 	}
 	dest.x = SKIN_TITLE_LEFT; dest.y = SKIN_TITLE_TOP;
-	SDL_BlitSurface(rendered, NULL, surf_screen, &dest);
-	SDL_FreeSurface(rendered);
+	SDL_BlitSurface(t->title_tex, NULL, surf_screen, &dest);
 
-	if(g_track % 2) rendered = TTF_RenderText_Blended(g_artist_font, "by Those Guys", black);
-	else rendered = TTF_RenderText_Blended(g_artist_font, "by The Cool Dudes", black);
-	if(!rendered) {
-		fprintf(stderr, "TTF_RenderText_Blended() failed\n");
-		exit(8);
+	if(!t->artist_tex) {
+		t->artist_tex = TTF_RenderText_Blended(g_artist_font, t->artist, black);
+		if(!t->artist_tex) {
+			fprintf(stderr, "TTF_RenderText_Blended(artist) failed\n");
+			exit(8);
+		}
 	}
 	dest.x = SKIN_ARTIST_LEFT; dest.y = SKIN_ARTIST_TOP;
-	SDL_BlitSurface(rendered, NULL, surf_screen, &dest);
-	SDL_FreeSurface(rendered);
+	SDL_BlitSurface(t->artist_tex, NULL, surf_screen, &dest);
+}
+
+#define NSDUP(a) memcpy(malloc(sizeof(a)), a, sizeof(a))
+void
+add_testing_tracks() {
+	playlist_append(g_playlist, track_new(NSDUP(
+		"test_1.ogg\000id1\000First Test Song\000First Test Artist\000254")));
+	playlist_append(g_playlist, track_new(NSDUP(
+		"test_2.ogg\000id2\000Second Test Song\000Second Test Artist\000324")));
+	playlist_append(g_playlist, track_new(NSDUP(
+		"test_3.ogg\000id3\000Third Test Song\000Third Test Artist\000269")));
 }
 
 int
@@ -404,9 +624,13 @@ main(int argc, char **argv) {
 
 	text_init();
 
+	playlist_init();
+
+	add_testing_tracks();
+
 	SDL_GetMouseState(&new_mouse_x, &new_mouse_y);
 
-	play_next();
+	play();
 
 	have_event = 0;
 	for(;;) {
