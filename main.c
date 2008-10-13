@@ -754,7 +754,7 @@ text_draw() {
 	if(!t) { return; } // FIXME do something more clever?
 
 	if(!t->title_tex) {
-		t->title_tex = TTF_RenderText_Blended(g_artist_font, t->title, black);
+		t->title_tex = TTF_RenderUTF8_Blended(g_artist_font, t->title, black);
 		if(!t->title_tex) {
 			fprintf(stderr, "TTF_RenderText_Blended(title) failed\n");
 			exit(8);
@@ -764,7 +764,7 @@ text_draw() {
 	SDL_BlitSurface(t->title_tex, NULL, surf_screen, &dest);
 
 	if(!t->artist_tex) {
-		t->artist_tex = TTF_RenderText_Blended(g_artist_font, t->artist, black);
+		t->artist_tex = TTF_RenderUTF8_Blended(g_artist_font, t->artist, black);
 		if(!t->artist_tex) {
 			fprintf(stderr, "TTF_RenderText_Blended(artist) failed\n");
 			exit(8);
@@ -778,7 +778,7 @@ text_draw() {
 void
 add_testing_tracks() {
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_1.ogg\000id1\000Round Room\000by Phish\000254")));
+		"test_1.ogg\000id1\000﻿മലയാളം malayāḷaṁ\000by Phish\000254")));
 	playlist_append(g_playlist, track_new(NSDUP(
 		"test_2.ogg\000id2\000Fee\000by Phish\000324")));
 	playlist_append(g_playlist, track_new(NSDUP(
