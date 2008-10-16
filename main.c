@@ -65,7 +65,7 @@ Mix_Music *g_music = 0;
 int g_mouse_over = 0;
 int g_mouse_x, g_mouse_y;
 int g_dirty = 1;
-int g_track = 0;
+int g_dragging_slider = 0;
 int g_state = STATE_STOPPED;
 SDL_Surface *surf_screen;
 SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over, *i_bubble_trash, *i_bubble_1, *i_bubble_2, *i_bubble_3, *i_bubble_4, *i_bubble_5;
@@ -535,6 +535,42 @@ load_skin() {
 	i_bubble_5 = load_image(SKIN_PREFIX"bubble_5.png");
 }
 
+void
+play_seek_fraction(double position) {
+	TrackInfo *t = playlist_cur(g_playlist);
+	if(!t) {
+		fprintf(stderr, "ERROR: tried to seek, but there's no track\n");
+		return;
+	}
+	playlist_seek_seconds(g_playlist, t->duration * position);
+	g_dirty = 1;
+}
+
+void
+play_seek_delta(int delta) {
+	TrackInfo *t = playlist_cur(g_playlist);
+	if(!t) {
+		fprintf(stderr, "ERROR: tried to seek, but there's no track\n");
+		return;
+	}
+	playlist_seek_seconds(g_playlist, playlist_get_progress_seconds(g_playlist) + delta);
+	g_dirty = 1;
+}
+
+void
+move_slider_to_mouse() {
+	int x = g_mouse_x;
+	if(g_mouse_x <= SKIN_SLIDER_0_X) {
+		x = SKIN_SLIDER_0_X;
+	} else if(g_mouse_x >= SKIN_SLIDER_100_X) {
+		x = SKIN_SLIDER_100_X; // Note: seeking maxes out at duration-1 seconds
+	}
+#ifdef DEBUG
+	fprintf(stderr, "Seeking to %f%%\n", (((float)x - SKIN_SLIDER_0_X) / ((float)SKIN_SLIDER_SPAN)) * 100);
+#endif
+	play_seek_fraction(((float)x - SKIN_SLIDER_0_X) / ((float)SKIN_SLIDER_SPAN));
+}
+
 int
 within_2d(int x, int y, int left, int top, int width, int height) {
 	if(x < left) return 0;
@@ -547,6 +583,12 @@ within_2d(int x, int y, int left, int top, int width, int height) {
 void
 mouse_moved() {
 	int mouse_over = 0;
+
+	if(g_dragging_slider) {
+		move_slider_to_mouse();
+		return; // don't do mouse-overs while dragging
+	}
+
 	if(within_2d(g_mouse_x, g_mouse_y, SKIN_PREV_LEFT, SKIN_PREV_TOP,
 	                                   SKIN_PREV_WIDTH, SKIN_PREV_HEIGHT)) {
 		mouse_over = OVER_PREV;
@@ -596,28 +638,6 @@ mouse_moved() {
 void
 recalculate_mouseover() {
 	mouse_moved();
-}
-
-void
-play_seek_fraction(double position) {
-	TrackInfo *t = playlist_cur(g_playlist);
-	if(!t) {
-		fprintf(stderr, "ERROR: tried to seek, but there's no track\n");
-		return;
-	}
-	playlist_seek_seconds(g_playlist, t->duration * position);
-	g_dirty = 1;
-}
-
-void
-play_seek_delta(int delta) {
-	TrackInfo *t = playlist_cur(g_playlist);
-	if(!t) {
-		fprintf(stderr, "ERROR: tried to seek, but there's no track\n");
-		return;
-	}
-	playlist_seek_seconds(g_playlist, playlist_get_progress_seconds(g_playlist) + delta);
-	g_dirty = 1;
 }
 
 void
@@ -673,7 +693,6 @@ play() {
 	g_dirty = 1;
 }
 
-
 // this function assumes that the mouse was clicked at (g_mouse_x, g_mouse_y)
 void
 mouse_clicked(int button) {
@@ -696,16 +715,7 @@ mouse_clicked(int button) {
 			fprintf(stderr, "Sorry, saving isn't implemented yet.\n"); // FIXME
 		break;
 		case OVER_BAR: {
-			int x = g_mouse_x;
-			if(g_mouse_x <= SKIN_SLIDER_0_X) {
-				x = SKIN_SLIDER_0_X;
-			} else if(g_mouse_x >= SKIN_SLIDER_100_X) {
-				x = SKIN_SLIDER_100_X; // Note: seeking maxes out at duration-1 seconds
-			}
-#ifdef DEBUG
-			fprintf(stderr, "Seeking to %f%%\n", (((float)x - SKIN_SLIDER_0_X) / ((float)SKIN_SLIDER_SPAN)) * 100);
-#endif
-			play_seek_fraction(((float)x - SKIN_SLIDER_0_X) / ((float)SKIN_SLIDER_SPAN));
+			move_slider_to_mouse();
 		break; }
 	}
 }
@@ -866,6 +876,10 @@ main(int argc, char **argv) {
 				case SDL_MOUSEMOTION:
 					new_mouse_x = e.motion.x;
 					new_mouse_y = e.motion.y;
+					if(g_dragging_slider && !e.motion.state) {
+						// if we miss an event, it would be very bad to be stuck dragging the slider
+						g_dragging_slider = 0;
+					}
 				break;
 				case SDL_MOUSEBUTTONDOWN:
 					new_mouse_x = e.button.x;
@@ -875,7 +889,21 @@ main(int argc, char **argv) {
 						g_mouse_y = new_mouse_y;
 						mouse_moved();
 					}
+					if(g_mouse_over == OVER_BAR) {
+						g_dragging_slider = 1;
+					}
 					mouse_clicked(e.button.button); // needs mouse_moved() to be called first
+				break;
+				case SDL_MOUSEBUTTONUP:
+					if(g_dragging_slider) {
+						if(new_mouse_x != g_mouse_x || new_mouse_y != g_mouse_y) {
+							g_mouse_x = new_mouse_x;
+							g_mouse_y = new_mouse_y;
+							mouse_moved(); // do the last of the drag
+						}
+						g_dragging_slider = 0;
+						mouse_moved(); // check for rollovers now that they're on again
+					}
 				break;
 				case SDL_USEREVENT:
 #ifdef DEBUG
