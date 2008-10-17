@@ -22,6 +22,48 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+///////////////////////  SETTINGS ///////////////////////
+//
+// You can change these settings by changing your CFLAGS. example:
+//
+// $ export CFLAGS="$CFLAGS -DSMALL_SEEK=3"
+//
+// number of seconds to seek for left/right keys and holding prev/next buttons
+#ifndef SMALL_SEEK
+#define SMALL_SEEK 5
+#endif
+
+// miliseconds between seeks when holding mouse button on prev/next buttons
+#ifndef SEEK_INTERVAL
+#define SEEK_INTERVAL 100
+#endif
+
+// path to directory containing skin images
+#ifndef SKIN_PREFIX
+#define SKIN_PREFIX "skin/"
+#endif
+
+// number of milliseconds to stall while waiting for events on a timeout
+#ifndef EVENT_LAG
+#define EVENT_LAG 50
+#endif
+
+// while playing, slider is updated every this many milliseconds
+#ifndef SLIDER_LAG
+#define SLIDER_LAG 700
+#endif
+
+// if the mouse button is held down longer than this then it's not considered a click
+#ifndef CLICK_THRESHOLD
+#define CLICK_THRESHOLD 200
+#endif
+
+
+
+
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 #include "skin_coords.h"
 #define SKIN_SLIDER_SPAN (SKIN_BAR_WIDTH - 2 * (SKIN_SLIDER_LEFT - SKIN_BAR_LEFT) - SKIN_SLIDER_WIDTH)
 #define SKIN_SLIDER_0_X (SKIN_SLIDER_LEFT + (SKIN_SLIDER_WIDTH / 2))
@@ -33,10 +75,6 @@
 #define SKIN_STAR_3_LEFT (SKIN_STAR_LEFT - SKIN_STAR_SPACING)
 #define SKIN_STAR_4_LEFT (SKIN_STAR_LEFT)
 #define SKIN_STAR_5_LEFT (SKIN_STAR_LEFT + SKIN_STAR_SPACING)
-
-#ifndef SKIN_PREFIX
-#define SKIN_PREFIX "skin/"
-#endif
 
 #define STATE_STARTING 0
 #define STATE_PLAYING 1
@@ -55,6 +93,11 @@
 #define OVER_STAR_3 10
 #define OVER_STAR_4 11
 #define OVER_STAR_5 12
+#define OVER_SLIDER 13
+
+#define DRAGGING_PREV OVER_PREV
+#define DRAGGING_NEXT OVER_NEXT
+#define DRAGGING_SLIDER OVER_SLIDER
 
 #define EVENT_MUSIC_FINISHED 1
 
@@ -65,10 +108,27 @@ Mix_Music *g_music = 0;
 int g_mouse_over = 0;
 int g_mouse_x, g_mouse_y;
 int g_dirty = 1;
-int g_dragging_slider = 0;
+int g_dragging = 0;
+uint32_t g_seek_at = 0;
+uint32_t g_dragging_start = 0;
 int g_state = STATE_STOPPED;
 SDL_Surface *surf_screen;
 SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over, *i_bubble_trash, *i_bubble_1, *i_bubble_2, *i_bubble_3, *i_bubble_4, *i_bubble_5;
+
+
+// wait up to ms for an event. return TRUE if an event was received
+uint8_t
+wait_event_with_timeout(SDL_Event *e, uint32_t ms) {
+	while(ms) {
+		if(SDL_PollEvent(e)) {
+			return 1;
+		}
+		SDL_Delay(MIN(ms, EVENT_LAG));
+		ms -= MIN(ms, EVENT_LAG);
+	}
+	return SDL_PollEvent(e);
+}
+	
 
 void set_state(int state);
 int get_state();
@@ -400,6 +460,10 @@ void
 draw() {
 	int i;
 	SDL_Rect dest;
+#ifdef DEBUG
+	fprintf(stderr, "redrawing (ticks: %i)\n", SDL_GetTicks());
+#endif
+
 	dest.x = SKIN_BACKGROUND_LEFT; dest.y = SKIN_BACKGROUND_TOP;
 	SDL_BlitSurface(i_background, NULL, surf_screen, &dest);
 
@@ -584,10 +648,16 @@ void
 mouse_moved() {
 	int mouse_over = 0;
 
-	if(g_dragging_slider) {
+	switch(g_dragging) {
+		case 0:
+		break;
+		case DRAGGING_PREV:
+		case DRAGGING_NEXT:
+		return; // don't do mouse-overs while dragging
+		case DRAGGING_SLIDER:
 		move_slider_to_mouse();
 		return; // don't do mouse-overs while dragging
-	}
+	} // else {
 
 	if(within_2d(g_mouse_x, g_mouse_y, SKIN_PREV_LEFT, SKIN_PREV_TOP,
 	                                   SKIN_PREV_WIDTH, SKIN_PREV_HEIGHT)) {
@@ -693,12 +763,34 @@ play() {
 	g_dirty = 1;
 }
 
+// call this to perform a seek that's been scheduled for now
+void
+delayed_seek() {
+#ifdef DEBUG
+	fprintf(stderr, "delayed seek\n");
+#endif
+	switch(g_dragging) {
+		case DRAGGING_PREV:
+			play_seek_delta(-SMALL_SEEK);
+		break;
+		case DRAGGING_NEXT:
+			play_seek_delta(SMALL_SEEK);
+		break;
+		default:
+			return;
+	}
+	g_seek_at = SDL_GetTicks() + SEEK_INTERVAL;
+}
+
 // this function assumes that the mouse was clicked at (g_mouse_x, g_mouse_y)
 void
 mouse_clicked(int button) {
 	switch(g_mouse_over) {
 		case OVER_PREV:
-			play_prev();
+			// play_prev();
+			g_dragging = DRAGGING_PREV;
+			g_dragging_start = SDL_GetTicks();
+			g_seek_at = g_dragging_start + CLICK_THRESHOLD;
 		break;
 		case OVER_PAUSE:
 			if(get_state() == STATE_PLAYING) {
@@ -709,14 +801,18 @@ mouse_clicked(int button) {
 			play();
 		break;
 		case OVER_NEXT:
-			play_next();
+			// play_next();
+			g_dragging = DRAGGING_NEXT;
+			g_dragging_start = SDL_GetTicks();
+			g_seek_at = g_dragging_start + CLICK_THRESHOLD;
 		break;
 		case OVER_SAVE:
 			fprintf(stderr, "Sorry, saving isn't implemented yet.\n"); // FIXME
 		break;
-		case OVER_BAR: {
+		case OVER_BAR:
 			move_slider_to_mouse();
-		break; }
+			g_dragging = DRAGGING_SLIDER;
+		break;
 	}
 }
 
@@ -864,10 +960,10 @@ main(int argc, char **argv) {
 							play_toggle_paused();
 						break;
 						case SDLK_RIGHT:
-							play_seek_delta(5);
+							play_seek_delta(SMALL_SEEK);
 						break;
 						case SDLK_LEFT:
-							play_seek_delta(-5);
+							play_seek_delta(-SMALL_SEEK);
 						break;
 						default:
 						break;
@@ -876,9 +972,9 @@ main(int argc, char **argv) {
 				case SDL_MOUSEMOTION:
 					new_mouse_x = e.motion.x;
 					new_mouse_y = e.motion.y;
-					if(g_dragging_slider && !e.motion.state) {
+					if(g_dragging && !e.motion.state) {
 						// if we miss an event, it would be very bad to be stuck dragging the slider
-						g_dragging_slider = 0;
+						g_dragging = 0;
 					}
 				break;
 				case SDL_MOUSEBUTTONDOWN:
@@ -889,19 +985,25 @@ main(int argc, char **argv) {
 						g_mouse_y = new_mouse_y;
 						mouse_moved();
 					}
-					if(g_mouse_over == OVER_BAR) {
-						g_dragging_slider = 1;
-					}
 					mouse_clicked(e.button.button); // needs mouse_moved() to be called first
 				break;
 				case SDL_MOUSEBUTTONUP:
-					if(g_dragging_slider) {
+					if(g_dragging) {
 						if(new_mouse_x != g_mouse_x || new_mouse_y != g_mouse_y) {
 							g_mouse_x = new_mouse_x;
 							g_mouse_y = new_mouse_y;
 							mouse_moved(); // do the last of the drag
 						}
-						g_dragging_slider = 0;
+						if(g_dragging == DRAGGING_PREV || g_dragging == DRAGGING_NEXT) {
+							if(SDL_GetTicks() - g_dragging_start < CLICK_THRESHOLD) {
+								if(g_dragging == DRAGGING_PREV) {
+									play_prev();
+								} else {
+									play_next();
+								}
+							}
+						}
+						g_dragging = 0;
 						mouse_moved(); // check for rollovers now that they're on again
 					}
 				break;
@@ -935,14 +1037,32 @@ main(int argc, char **argv) {
 		if(get_state() == STATE_PLAYING) {
 			have_event = 0;
 			i = 0;
-			for(i = 0; !have_event; ++i) {
-				have_event = SDL_PollEvent(&e);
-				if(!have_event) {
-					SDL_Delay(50);
-					if(i % 14) {
-						g_dirty = 1;
-						draw();
+
+			while(!have_event) {
+				if(g_dragging == DRAGGING_PREV || g_dragging == DRAGGING_NEXT) {
+					uint32_t delta;
+					delta = g_seek_at - SDL_GetTicks();
+					if(delta == 0 || delta > 4000) {
+						delayed_seek();
+					} else {
+						fprintf(stderr, "waiting for seek for %ims\n", delta);
+						have_event = wait_event_with_timeout(&e, delta);
+						if(!have_event) { // waited full time
+							delayed_seek();
+						}
 					}
+				} else {
+					have_event = wait_event_with_timeout(&e, SLIDER_LAG);
+					if(!have_event) {
+						g_dirty = 1;
+					}
+				}
+
+				// when holding mouse down on prev/next or playing, the
+				// display must be updated even though there's no events
+				// coming in
+				if(g_dirty) {
+					draw();
 				}
 			}
 		} else {
