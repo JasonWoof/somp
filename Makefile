@@ -12,10 +12,22 @@ cflags := $(sdl-cflags) $(CFLAGS) -Wall -DDEBUG
 
 SKIN_PARTS= background next prev save title artist star nostar trash bar slider pause play next_over prev_over save_over pause_over play_over bubble_trash bubble_1 bubble_2 bubble_3 bubble_4 bubble_5
 
-all: radio skin_coords.h
+OBJECTS := somp skin_coords.h
 
-radio: main.c skin_coords.h
-	gcc -o radio $(ldflags) $(cflags) main.c
+all: $(OBJECTS)
+
+somp: main.c skin_coords.h
+	gcc -o somp $(ldflags) $(cflags) main.c
 
 skin_coords.h: read_skin_coords.rb $(SKIN)
 	ruby read_skin_coords.rb $(SKIN) $(SKIN_PARTS)
+
+SKIN_PNGS := $(SKIN_PARTS:%=skin/%.png)
+
+data-clean:
+	rm -f $(SKIN_PNGS)
+
+clean:
+	rm -f $(OBJECTS)
+
+distclean: clean data-clean

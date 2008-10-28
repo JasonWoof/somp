@@ -1,4 +1,4 @@
-/* Open Content Radio copyright (C) 2008 Jason Woofenden
+/* somp copyright (C) 2008 Jason Woofenden
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -921,7 +921,7 @@ main(int argc, char **argv) {
 	surf_screen = SDL_SetVideoMode(SKIN_BACKGROUND_WIDTH,SKIN_BACKGROUND_HEIGHT,32,0);
 
 	// Set the title bar text
-	SDL_WM_SetCaption("Open Music Radio", "OMR");
+	SDL_WM_SetCaption("Simple Open Music Player", "somp");
 
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 

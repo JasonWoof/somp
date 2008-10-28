@@ -7,6 +7,9 @@ you could probably easily compile it for just about anything.
 
 You'll need these libraries: sdl, sdl-mixer, sdl-image, libogg and libpng
 
+To build from a git pull, you'll also need inkscape and ruby to build the skin.
+You'll also need FreeSerif.ttf and some ogg files named "test_1.ogg",
+"test_2.ogg", "test_3.ogg", "test_4.ogg" and "test_5.ogg" in this directory.
 
 == Building ==
 
@@ -15,17 +18,20 @@ Type "make" in this directory.
 
 == Running ==
 
-Type "./radio" in this directory.
+Type "./somp" in this directory.
 
 
 == Editing the skin ==
 
 Prerequisites: You'll need to have inkscape and ruby installed.
 
-To change the look of the player, you can edit skin.svg in eg inkscape.
+To change the look of the player, you can edit skin.svg in inkscape.
 
 You can move all the pieces around, because they are found by the build script
-by their object id.
+by their object id. If you want to replace an element: note it's "id" under
+"object properties" with another element, delete it, create your new element,
+and go to "object properties" and set the "id" to the id of the element you're
+replacing.
 
 If you change the dimensions you'll need to update canvas_height and
 canvas_width in read_skin_coords.rb

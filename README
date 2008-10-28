@@ -1,8 +1,16 @@
-===  About Open Content Radio  (name will probably have to change later) ===
+===  somp: Simple Open Music Player  ===
 
 This is a free software music player that will automatically download free
 (Creative commons or the like) music and play it for you. It will adjust the
 music to your tastes as you rate the songs it plays.
 
-Status: Very early development. The interface is starting to work, and it just
-alternates between two hard-coded test tracks.
+Status: Under development. Not useful yet.
+
+
+Done:
+       * Skin you can edit in Inkscape, that's automagically converted to PNGs and C code.
+       * GUI mostly finished, including playback, seeking, etc.
+
+To Do:
+       * Ratings server interraction
+       * Download, play and save tracks
