@@ -884,15 +884,15 @@ text_draw() {
 void
 add_testing_tracks() {
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_1.ogg\000id1\000﻿മലയാളം malayāḷaṁ\000by Phish\000254")));
+		"test_1.ogg\000id1\000﻿മലയാളം malayāḷaṁ\000by Testing unusual characters\000254")));
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_2.ogg\000id2\000Fee\000by Phish\000324")));
+		"test_2.ogg\000id2\000Terse\000by Verse\000324")));
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_3.ogg\000id3\000Bathtub Gin\000by Phish\000269")));
+		"test_3.ogg\000id3\000Track name goes here\000by Band name goes here\000269")));
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_4.ogg\000id4\000Medley: Crow River Waltz-Jesu Joy Of Man's Desiring-Jack Fig\000by Leo Kottke\000436")));
+		"test_4.ogg\000id4\000Testing unusually long track name that might not fit\000by a realy long artist name that might not fit\000436")));
 	playlist_append(g_playlist, track_new(NSDUP(
-		"test_5.ogg\000id5\000Skylife\000by Turtle Island String Quartet\000271")));
+		"test_5.ogg\000id5\000The last track in the playlist\000by will loop after this\000271")));
 }
 
 int

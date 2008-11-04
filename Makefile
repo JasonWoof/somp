@@ -25,15 +25,15 @@ test_1.ogg:
 test_2.ogg:
 	wget 'http://upload.wikimedia.org/wikipedia/commons/0/09/I_Want_to_Go_Back_to_Michigan.ogg' -O test_2.ogg || rm -f test_2.ogg
 
-# FIXME
 test_3.ogg:
-	ln -s test_1.ogg test_3.ogg
-# FIXME
+	wget 'http://upload.wikimedia.org/wikipedia/commons/2/24/Mozart_-_Eine_kleine_Nachtmusik_-_1._Allegro.ogg' -O test_3.ogg || rm -f test_3.ogg
+
 test_4.ogg:
-	ln -s test_2.ogg test_4.ogg
-# FIXME
+	wget 'http://upload.wikimedia.org/wikipedia/commons/b/bf/Al_Jolson%2C_George_Gershwin%2C_Irving_Caesar%2C_Swanee_1920.ogg' -O test_4.ogg || rm -f test_4.ogg
+
 test_5.ogg:
-	ln -s test_2.ogg test_5.ogg
+	wget 'http://upload.wikimedia.org/wikipedia/commons/f/f6/Massenet_-_Le_Cid_-_Pleurez%2C_pleurez%2C_mes_yeux.ogg' -O test_5.ogg || rm -f test_5.ogg
+
 
 somp: main.c skin_coords.h
 	gcc -o somp $(ldflags) $(cflags) main.c
