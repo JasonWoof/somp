@@ -12,9 +12,12 @@ cflags := $(sdl-cflags) $(CFLAGS) -Wall -DDEBUG
 
 SKIN_PARTS= background next prev save title artist star nostar trash bar slider pause play next_over prev_over save_over pause_over play_over bubble_trash bubble_1 bubble_2 bubble_3 bubble_4 bubble_5
 
-OBJECTS := somp skin_coords.h
+OBJECTS= somp skin_coords.h
 
-all: $(OBJECTS)
+all: $(OBJECTS) FreeSerif.ttf
+
+FreeSerif.ttf:
+	wget 'http://ftp.gnu.org/gnu/freefont/freefont-ttf-20080912.tar.gz' -O - | tar -xzf - freefont-20080912/FreeSerif.ttf -O > FreeSerif.ttf || rm -f FreeSerif.ttf
 
 somp: main.c skin_coords.h
 	gcc -o somp $(ldflags) $(cflags) main.c

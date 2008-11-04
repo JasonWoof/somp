@@ -7,9 +7,8 @@ you could probably easily compile it for just about anything.
 
 You'll need these libraries: sdl, sdl-mixer, sdl-image, libogg and libpng
 
-To build from a git pull, you'll also need inkscape and ruby to build the skin.
-You'll also need FreeSerif.ttf and some ogg files named "test_1.ogg",
-"test_2.ogg", "test_3.ogg", "test_4.ogg" and "test_5.ogg" in this directory.
+To build from git, you'll also need inkscape, ruby and wget.
+
 
 == Building ==
 
