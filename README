@@ -8,9 +8,10 @@ Status: Under development. Not useful yet.
 
 
 Done:
-       * Skin you can edit in Inkscape, that's automagically converted to PNGs and C code.
+       * Skin you can edit in Inkscape (see INSTALL for details)
        * GUI mostly finished, including playback, seeking, etc.
 
 To Do:
        * Ratings server interraction
        * Download, play and save tracks
+       * Finish making GUI translatable with gettext

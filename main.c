@@ -76,6 +76,11 @@
 #define SKIN_STAR_4_LEFT (SKIN_STAR_LEFT)
 #define SKIN_STAR_5_LEFT (SKIN_STAR_LEFT + SKIN_STAR_SPACING)
 
+#define SKIN_BUBBLE_LEFT_WIDTH (SKIN_BUBBLE_MIDDLE_LEFT - SKIN_BUBBLE_LEFT)
+#define SKIN_BUBBLE_RIGHT_WIDTH (SKIN_BUBBLE_WIDTH - SKIN_BUBBLE_LEFT_WIDTH - SKIN_BUBBLE_MIDDLE_WIDTH)
+#define SKIN_BUBBLE_TEXT_INDENT_X (SKIN_BUBBLE_TEXT_LEFT - SKIN_BUBBLE_LEFT)
+#define SKIN_BUBBLE_TEXT_INDENT_Y (SKIN_BUBBLE_TEXT_TOP - SKIN_BUBBLE_TOP)
+
 #define STATE_STARTING 0
 #define STATE_PLAYING 1
 #define STATE_PAUSED 2
@@ -101,6 +106,10 @@
 
 #define EVENT_MUSIC_FINISHED 1
 
+// FIXME use gettext()
+#define TRANSLATE(a) (a)
+
+
 // GLOBALS
 TTF_Font *g_artist_font;
 Mix_Music *g_music = 0;
@@ -113,8 +122,8 @@ uint32_t g_seek_at = 0;
 uint32_t g_dragging_start = 0;
 int g_state = STATE_STOPPED;
 SDL_Surface *surf_screen;
-SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over, *i_bubble_trash, *i_bubble_1, *i_bubble_2, *i_bubble_3, *i_bubble_4, *i_bubble_5;
-
+SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over, *i_bubble;
+SDL_Surface *i_txt_bubble_trash, *i_txt_bubble_1, *i_txt_bubble_2, *i_txt_bubble_3, *i_txt_bubble_4, *i_txt_bubble_5;
 
 // wait up to ms for an event. return TRUE if an event was received
 uint8_t
@@ -128,7 +137,7 @@ wait_event_with_timeout(SDL_Event *e, uint32_t ms) {
 	}
 	return SDL_PollEvent(e);
 }
-	
+
 
 void set_state(int state);
 int get_state();
@@ -252,7 +261,7 @@ playlist_new() {
 		fprintf(stderr, "Failed to allocate memory for playlist structure\n");
 		exit(11);
 	}
-	
+
 	for(i = 0; i < PLAYLIST_SIZE; ++i) {
 		p->tracks[i] = 0;
 	}
@@ -273,7 +282,7 @@ void dump_track(TrackInfo *t) {
 #ifdef DEBUG
 void dump_playlist(Playlist *p) {
 	int i;
-	
+
 	fprintf(stderr, "Playlist: cur=%i, length=%i\n", p->cur, p->length);
 
 	for(i = 0; i < PLAYLIST_SIZE; ++i) {
@@ -296,7 +305,7 @@ playlist_init() {
 void
 playlist_delete(Playlist *p) {
 	int i;
-	
+
 	for(i = 0; i < PLAYLIST_SIZE; ++i) {
 		if(p->tracks[i]) {
 			track_delete(p->tracks[i]);
@@ -410,7 +419,7 @@ playlist_get_progress_seconds(Playlist *p) {
 	if(delta >= duration * 1000) {
 		return duration;
 	}
-	
+
 	return ((float)delta) / 1000;
 }
 
@@ -432,7 +441,7 @@ void
 playlist_seek_seconds(Playlist *p, double position) {
 	TrackInfo *t;
 	uint32_t now;
-	
+
 	t = playlist_cur(p);
 
 	if(!t) {
@@ -453,6 +462,41 @@ playlist_seek_seconds(Playlist *p, double position) {
 	p->paused_at = now; // in case we're paused
 }
 
+
+void
+draw_bubble(int x, int y, SDL_Surface* text) {
+	int width_left, w;
+	SDL_Rect dest, src;
+	dest.x = x; dest.y = y;
+
+	// draw left end of the bubble
+	src.x = 0; src.y = 0;
+	src.w = SKIN_BUBBLE_LEFT_WIDTH;
+	src.h = SKIN_BUBBLE_HEIGHT;
+	SDL_BlitSurface(i_bubble, &src, surf_screen, &dest);
+	src.x += SKIN_BUBBLE_LEFT_WIDTH;
+	dest.x += SKIN_BUBBLE_LEFT_WIDTH;
+
+	// draw middle of the bubble
+	width_left = text->w - (SKIN_BUBBLE_TEXT_WIDTH - SKIN_BUBBLE_MIDDLE_WIDTH);
+	while(width_left > 0) {
+		w = MIN(width_left, SKIN_BUBBLE_MIDDLE_WIDTH);
+		src.w = w;
+		SDL_BlitSurface(i_bubble, &src, surf_screen, &dest);
+		dest.x += w;
+		width_left -= w;
+	}
+
+	// draw the right end of the bubble
+	src.x += SKIN_BUBBLE_MIDDLE_WIDTH;
+	src.w = SKIN_BUBBLE_RIGHT_WIDTH;
+	SDL_BlitSurface(i_bubble, &src, surf_screen, &dest);
+
+	// draw the text
+	dest.x = x + SKIN_BUBBLE_TEXT_INDENT_X;
+	dest.y = y + SKIN_BUBBLE_TEXT_INDENT_Y;
+	SDL_BlitSurface(text, NULL, surf_screen, &dest);
+}
 
 
 // TODO consider making a memory structure to hold all this
@@ -528,30 +572,25 @@ draw() {
 
 	text_draw();
 
+
 	switch(g_mouse_over) {
 		case OVER_TRASH:
-			dest.x = SKIN_BUBBLE_TRASH_LEFT; dest.y = SKIN_BUBBLE_TRASH_TOP;
-			SDL_BlitSurface(i_bubble_trash, NULL, surf_screen, &dest);
+			draw_bubble(SKIN_TRASH_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_trash);
 		break;
 		case OVER_STAR_1:
-			dest.x = SKIN_BUBBLE_1_LEFT; dest.y = SKIN_BUBBLE_1_TOP;
-			SDL_BlitSurface(i_bubble_1, NULL, surf_screen, &dest);
+			draw_bubble(SKIN_STAR_1_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_1);
 		break;
 		case OVER_STAR_2:
-			dest.x = SKIN_BUBBLE_2_LEFT; dest.y = SKIN_BUBBLE_2_TOP;
-			SDL_BlitSurface(i_bubble_2, NULL, surf_screen, &dest);
+			draw_bubble(SKIN_STAR_2_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_2);
 		break;
 		case OVER_STAR_3:
-			dest.x = SKIN_BUBBLE_3_LEFT; dest.y = SKIN_BUBBLE_3_TOP;
-			SDL_BlitSurface(i_bubble_3, NULL, surf_screen, &dest);
+			draw_bubble(SKIN_STAR_3_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_3);
 		break;
 		case OVER_STAR_4:
-			dest.x = SKIN_BUBBLE_4_LEFT; dest.y = SKIN_BUBBLE_4_TOP;
-			SDL_BlitSurface(i_bubble_4, NULL, surf_screen, &dest);
+			draw_bubble(SKIN_STAR_4_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_4);
 		break;
 		case OVER_STAR_5:
-			dest.x = SKIN_BUBBLE_5_LEFT; dest.y = SKIN_BUBBLE_5_TOP;
-			SDL_BlitSurface(i_bubble_5, NULL, surf_screen, &dest);
+			draw_bubble(SKIN_STAR_5_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_5);
 		break;
 	}
 
@@ -591,12 +630,7 @@ load_skin() {
 	i_save_over = load_image(SKIN_PREFIX"save_over.png");
 	i_pause_over = load_image(SKIN_PREFIX"pause_over.png");
 	i_play_over = load_image(SKIN_PREFIX"play_over.png");
-	i_bubble_trash = load_image(SKIN_PREFIX"bubble_trash.png");
-	i_bubble_1 = load_image(SKIN_PREFIX"bubble_1.png");
-	i_bubble_2 = load_image(SKIN_PREFIX"bubble_2.png");
-	i_bubble_3 = load_image(SKIN_PREFIX"bubble_3.png");
-	i_bubble_4 = load_image(SKIN_PREFIX"bubble_4.png");
-	i_bubble_5 = load_image(SKIN_PREFIX"bubble_5.png");
+	i_bubble = load_image(SKIN_PREFIX"bubble.png");
 }
 
 void
@@ -842,6 +876,19 @@ font_init(char* file, int ptsize) {
 	return f;
 }
 
+SDL_Surface*
+text_to_surface(const char* txt) {
+	SDL_Color black = {0, 0, 0, 125};
+
+	SDL_Surface* surf = TTF_RenderUTF8_Blended(g_artist_font, txt, black);
+	if(!surf) {
+		fprintf(stderr, "TTF_RenderText_Blended(%s) failed\n", txt);
+		exit(8);
+	}
+
+	return surf;
+}
+
 void
 text_init() {
 	if (TTF_Init() == -1) {
@@ -850,31 +897,29 @@ text_init() {
 	}
 
 	g_artist_font = font_init("FreeSerif.ttf", 18);
+
+	i_txt_bubble_trash = text_to_surface(TRANSLATE("Delete immediately!!!"));
+	i_txt_bubble_1 = text_to_surface(TRANSLATE("Feh!"));
+	i_txt_bubble_2 = text_to_surface(TRANSLATE("OK."));
+	i_txt_bubble_3 = text_to_surface(TRANSLATE("Nice"));
+	i_txt_bubble_4 = text_to_surface(TRANSLATE("Good stuff!"));
+	i_txt_bubble_5 = text_to_surface(TRANSLATE("I love it!"));
 }
 
 void
 text_draw() {
-	SDL_Color black = {0, 0, 0, 125};
 	SDL_Rect dest;
 	TrackInfo *t = playlist_cur(g_playlist);
 	if(!t) { return; } // FIXME do something more clever?
 
 	if(!t->title_tex) {
-		t->title_tex = TTF_RenderUTF8_Blended(g_artist_font, t->title, black);
-		if(!t->title_tex) {
-			fprintf(stderr, "TTF_RenderText_Blended(title) failed\n");
-			exit(8);
-		}
+		t->title_tex = text_to_surface(t->title);
 	}
 	dest.x = SKIN_TITLE_LEFT + 3; dest.y = SKIN_TITLE_TOP;
 	SDL_BlitSurface(t->title_tex, NULL, surf_screen, &dest);
 
 	if(!t->artist_tex) {
-		t->artist_tex = TTF_RenderUTF8_Blended(g_artist_font, t->artist, black);
-		if(!t->artist_tex) {
-			fprintf(stderr, "TTF_RenderText_Blended(artist) failed\n");
-			exit(8);
-		}
+		t->artist_tex = text_to_surface(t->artist);
 	}
 	dest.x = SKIN_TITLE_LEFT + 3; dest.y = SKIN_ARTIST_TOP;
 	SDL_BlitSurface(t->artist_tex, NULL, surf_screen, &dest);
@@ -901,7 +946,7 @@ main(int argc, char **argv) {
 	int have_event;
 	int i;
 	SDL_Event e;
-	
+
 	// Initialize SDL
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
 		fputs("SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) failed\n", stderr);

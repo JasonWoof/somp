@@ -35,4 +35,11 @@ replacing.
 If you change the dimensions you'll need to update canvas_height and
 canvas_width in read_skin_coords.rb
 
+The bubble is tricky, because it needs to be expandable at runtime to
+accomodate different amounts of text. There is a very thin box over the bubble
+which shows where it will be sliced. The bubble graphic is sliced into 3
+columns at the edges of this box. The middle column will be repeated as
+nessesary to fit the text in the bubble. If you update this graphic, carefully
+place the clipping box around the horizontally uniform part in the middle.
+
 When you're done editing skin.svg run "make" to rebuild.

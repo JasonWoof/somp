@@ -69,8 +69,21 @@ f.each { |line|
 }
 
 if coords.length != tags.length
+	missing = Array.new()
+	tags.each() { |t|
+		if(!coords[t])
+			missing << t
+		end
+	}
+
 	# TODO say which one is missing
-	print "ERROR: skin doesn't have all the tags it should. It must contain all these: #{tags.esc_shell}\n"
+	print "ERROR: skin is missing the following tag"
+	if(missing.length > 1)
+		print "s"
+	end
+	print ": "
+	print missing.join(', ')
+	print "\n"
 	exit(1)
 end
 
@@ -101,11 +114,20 @@ coords.each { |tag,row|
 		x -= 2;
 		height += 7;
 		width += 6;
+		if(tag == 'bubble')
+			y -= 5;
+			x -= 5;
+			height += 10;
+			width += 10;
+		end
 	end
 	out.print "\n"
 	out.print "#define SKIN_#{tag.upcase}_LEFT #{x}\n"
 	out.print "#define SKIN_#{tag.upcase}_TOP #{y}\n"
 	out.print "#define SKIN_#{tag.upcase}_WIDTH #{width}\n"
 	out.print "#define SKIN_#{tag.upcase}_HEIGHT #{height}\n"
-	system("inkscape --export-id=#{tag.esc_shell} --export-id-only --export-area=#{x}:#{canvas_height-y-height}:#{x+width}:#{canvas_height-y} --export-width=#{width} --export-png='skin/#{tag}.png' #{svg}\n")
+	# uppercase tags are used for their coordinates, no need to make an image
+	if(tag.upcase != tag)
+		system("inkscape --export-id=#{tag.esc_shell} --export-id-only --export-area=#{x}:#{canvas_height-y-height}:#{x+width}:#{canvas_height-y} --export-width=#{width} --export-png='skin/#{tag}.png' #{svg}\n")
+	end
 }

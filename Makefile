@@ -10,7 +10,7 @@ cflags := $(sdl-cflags) $(CFLAGS) -Wall -DDEBUG
 
 
 
-SKIN_PARTS= background next prev save title artist star nostar trash bar slider pause play next_over prev_over save_over pause_over play_over bubble_trash bubble_1 bubble_2 bubble_3 bubble_4 bubble_5
+SKIN_PARTS= background next prev save SAVE_MIDDLE TITLE ARTIST star nostar trash bar slider pause play next_over prev_over save_over pause_over play_over bubble BUBBLE_TEXT BUBBLE_MIDDLE
 
 OBJECTS= somp skin_coords.h
 
@@ -39,6 +39,7 @@ somp: main.c skin_coords.h
 	gcc -o somp $(ldflags) $(cflags) main.c
 
 skin_coords.h: read_skin_coords.rb $(SKIN)
+	mkdir -p skin
 	ruby read_skin_coords.rb $(SKIN) $(SKIN_PARTS)
 
 SKIN_PNGS := $(SKIN_PARTS:%=skin/%.png)
