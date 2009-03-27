@@ -10,7 +10,7 @@ cflags := $(sdl-cflags) $(CFLAGS) -Wall -DDEBUG
 
 
 
-SKIN_PARTS= background next prev save SAVE_MIDDLE TITLE ARTIST star nostar trash bar slider pause play next_over prev_over save_over pause_over play_over bubble BUBBLE_TEXT BUBBLE_MIDDLE
+SKIN_PARTS= background next prev save SAVE_MIDDLE SAVE_TEXT TITLE ARTIST star nostar trash bar slider pause play next_over prev_over save_over SAVE_OVER_MIDDLE SAVE_OVER_TEXT pause_over play_over bubble BUBBLE_TEXT BUBBLE_MIDDLE
 
 OBJECTS= somp skin_coords.h
 

@@ -76,10 +76,40 @@
 #define SKIN_STAR_4_LEFT (SKIN_STAR_LEFT)
 #define SKIN_STAR_5_LEFT (SKIN_STAR_LEFT + SKIN_STAR_SPACING)
 
+#define SKIN_STAR_1_HEIGHT (SKIN_STAR_HEIGHT)
+#define SKIN_STAR_2_HEIGHT (SKIN_STAR_HEIGHT)
+#define SKIN_STAR_3_HEIGHT (SKIN_STAR_HEIGHT)
+#define SKIN_STAR_4_HEIGHT (SKIN_STAR_HEIGHT)
+#define SKIN_STAR_5_HEIGHT (SKIN_STAR_HEIGHT)
+#define SKIN_STAR_1_WIDTH (SKIN_STAR_WIDTH)
+#define SKIN_STAR_2_WIDTH (SKIN_STAR_WIDTH)
+#define SKIN_STAR_3_WIDTH (SKIN_STAR_WIDTH)
+#define SKIN_STAR_4_WIDTH (SKIN_STAR_WIDTH)
+#define SKIN_STAR_5_WIDTH (SKIN_STAR_WIDTH)
+#define SKIN_STAR_1_TOP (SKIN_STAR_TOP)
+#define SKIN_STAR_2_TOP (SKIN_STAR_TOP)
+#define SKIN_STAR_3_TOP (SKIN_STAR_TOP)
+#define SKIN_STAR_4_TOP (SKIN_STAR_TOP)
+#define SKIN_STAR_5_TOP (SKIN_STAR_TOP)
+
 #define SKIN_BUBBLE_LEFT_WIDTH (SKIN_BUBBLE_MIDDLE_LEFT - SKIN_BUBBLE_LEFT)
 #define SKIN_BUBBLE_RIGHT_WIDTH (SKIN_BUBBLE_WIDTH - SKIN_BUBBLE_LEFT_WIDTH - SKIN_BUBBLE_MIDDLE_WIDTH)
 #define SKIN_BUBBLE_TEXT_INDENT_X (SKIN_BUBBLE_TEXT_LEFT - SKIN_BUBBLE_LEFT)
 #define SKIN_BUBBLE_TEXT_INDENT_Y (SKIN_BUBBLE_TEXT_TOP - SKIN_BUBBLE_TOP)
+
+// offset of bubble relative (middle,top) of the thing it's pointing at
+#define SKIN_BUBBLE_REL_X (SKIN_BUBBLE_LEFT - (SKIN_NOSTAR_LEFT + (SKIN_NOSTAR_WIDTH / 2)))
+#define SKIN_BUBBLE_REL_Y (SKIN_BUBBLE_TOP - (SKIN_NOSTAR_TOP))
+
+#define SKIN_SAVE_LEFT_WIDTH (SKIN_SAVE_MIDDLE_LEFT - SKIN_SAVE_LEFT)
+#define SKIN_SAVE_RIGHT_WIDTH (SKIN_SAVE_WIDTH - SKIN_SAVE_LEFT_WIDTH - SKIN_SAVE_MIDDLE_WIDTH)
+#define SKIN_SAVE_TEXT_INDENT_X (SKIN_SAVE_TEXT_LEFT - SKIN_SAVE_LEFT)
+#define SKIN_SAVE_TEXT_INDENT_Y (SKIN_SAVE_TEXT_TOP - SKIN_SAVE_TOP)
+
+#define SKIN_SAVE_OVER_LEFT_WIDTH (SKIN_SAVE_OVER_MIDDLE_LEFT - SKIN_SAVE_OVER_LEFT)
+#define SKIN_SAVE_OVER_RIGHT_WIDTH (SKIN_SAVE_OVER_WIDTH - SKIN_SAVE_OVER_LEFT_WIDTH - SKIN_SAVE_OVER_MIDDLE_WIDTH)
+#define SKIN_SAVE_OVER_TEXT_INDENT_X (SKIN_SAVE_OVER_TEXT_LEFT - SKIN_SAVE_OVER_LEFT)
+#define SKIN_SAVE_OVER_TEXT_INDENT_Y (SKIN_SAVE_OVER_TEXT_TOP - SKIN_SAVE_OVER_TOP)
 
 #define STATE_STARTING 0
 #define STATE_PLAYING 1
@@ -123,7 +153,8 @@ uint32_t g_dragging_start = 0;
 int g_state = STATE_STOPPED;
 SDL_Surface *surf_screen;
 SDL_Surface *i_background, *i_next, *i_prev, *i_save, *i_star, *i_nostar, *i_trash, *i_bar, *i_slider, *i_pause, *i_play, *i_next_over, *i_prev_over, *i_save_over, *i_pause_over, *i_play_over, *i_bubble;
-SDL_Surface *i_txt_bubble_trash, *i_txt_bubble_1, *i_txt_bubble_2, *i_txt_bubble_3, *i_txt_bubble_4, *i_txt_bubble_5;
+SDL_Surface *i_txt_bubble_trash, *i_txt_bubble_1, *i_txt_bubble_2, *i_txt_bubble_3, *i_txt_bubble_4, *i_txt_bubble_5, *i_txt_save;
+int g_skin_save_left, g_skin_save_width;
 
 // wait up to ms for an event. return TRUE if an event was received
 uint8_t
@@ -462,40 +493,177 @@ playlist_seek_seconds(Playlist *p, double position) {
 	p->paused_at = now; // in case we're paused
 }
 
+typedef struct {
+	int top, left, width, height, left_width, middle_width, capacity, text_indent_x, text_indent_y;
+	SDL_Surface *surface;
+	void(*draw)(void*);
+} sprite;
+
+sprite g_bubble_sprite = {
+	SKIN_BUBBLE_TOP,
+	SKIN_BUBBLE_LEFT,
+	SKIN_BUBBLE_WIDTH,
+	SKIN_BUBBLE_HEIGHT,
+	SKIN_BUBBLE_LEFT_WIDTH,
+	SKIN_BUBBLE_MIDDLE_WIDTH,
+	SKIN_BUBBLE_TEXT_WIDTH - SKIN_BUBBLE_MIDDLE_WIDTH,
+	SKIN_BUBBLE_TEXT_INDENT_X,
+	SKIN_BUBBLE_TEXT_INDENT_Y,
+	NULL,
+	NULL
+};
+
+sprite g_save_sprite = {
+	SKIN_SAVE_TOP,
+	SKIN_SAVE_LEFT,
+	SKIN_SAVE_WIDTH,
+	SKIN_SAVE_HEIGHT,
+	SKIN_SAVE_LEFT_WIDTH,
+	SKIN_SAVE_MIDDLE_WIDTH,
+	SKIN_SAVE_TEXT_WIDTH - SKIN_SAVE_MIDDLE_WIDTH,
+	SKIN_SAVE_TEXT_INDENT_X,
+	SKIN_SAVE_TEXT_INDENT_Y,
+	NULL,
+	NULL
+};
+
+sprite g_save_over_sprite = {
+	SKIN_SAVE_OVER_TOP,
+	SKIN_SAVE_OVER_LEFT,
+	SKIN_SAVE_OVER_WIDTH,
+	SKIN_SAVE_OVER_HEIGHT,
+	SKIN_SAVE_OVER_LEFT_WIDTH,
+	SKIN_SAVE_OVER_MIDDLE_WIDTH,
+	SKIN_SAVE_OVER_TEXT_WIDTH - SKIN_SAVE_OVER_MIDDLE_WIDTH,
+	SKIN_SAVE_OVER_TEXT_INDENT_X,
+	SKIN_SAVE_OVER_TEXT_INDENT_Y,
+	NULL,
+	NULL
+};
+
+sprite g_trash_sprite = {
+	SKIN_TRASH_TOP,
+	SKIN_TRASH_LEFT,
+	SKIN_TRASH_WIDTH,
+	SKIN_TRASH_HEIGHT,
+	0, 0, 0, 0, 0, NULL, NULL
+};
+
+sprite g_star_1_sprite = {
+	SKIN_STAR_1_TOP,
+	SKIN_STAR_1_LEFT,
+	SKIN_STAR_1_WIDTH,
+	SKIN_STAR_1_HEIGHT,
+	0, 0, 0, 0, 0, NULL, NULL
+};
+
+sprite g_star_2_sprite = {
+	SKIN_STAR_2_TOP,
+	SKIN_STAR_2_LEFT,
+	SKIN_STAR_2_WIDTH,
+	SKIN_STAR_2_HEIGHT,
+	0, 0, 0, 0, 0, NULL, NULL
+};
+
+sprite g_star_3_sprite = {
+	SKIN_STAR_3_TOP,
+	SKIN_STAR_3_LEFT,
+	SKIN_STAR_3_WIDTH,
+	SKIN_STAR_3_HEIGHT,
+	0, 0, 0, 0, 0, NULL, NULL
+};
+
+sprite g_star_4_sprite = {
+	SKIN_STAR_4_TOP,
+	SKIN_STAR_4_LEFT,
+	SKIN_STAR_4_WIDTH,
+	SKIN_STAR_4_HEIGHT,
+	0, 0, 0, 0, 0, NULL, NULL
+};
+
+sprite g_star_5_sprite = {
+	SKIN_STAR_5_TOP,
+	SKIN_STAR_5_LEFT,
+	SKIN_STAR_5_WIDTH,
+	SKIN_STAR_5_HEIGHT,
+	0, 0, 0, 0, 0, NULL, NULL
+};
+
 
 void
-draw_bubble(int x, int y, SDL_Surface* text) {
+draw_sprite_at(int x, int y, sprite* s) {
+	SDL_Rect dest;
+	dest.x = x; dest.y = y;
+
+	SDL_BlitSurface(s->surface, NULL, surf_screen, &dest);
+}
+
+void
+draw_sprite(sprite *s) {
+	draw_sprite_at(s->left, s->top, s);
+}
+
+void
+draw_expanding_sprite(int x, int y, int capacity, sprite *s) {
 	int width_left, w;
 	SDL_Rect dest, src;
 	dest.x = x; dest.y = y;
 
-	// draw left end of the bubble
-	src.x = 0; src.y = 0;
-	src.w = SKIN_BUBBLE_LEFT_WIDTH;
-	src.h = SKIN_BUBBLE_HEIGHT;
-	SDL_BlitSurface(i_bubble, &src, surf_screen, &dest);
-	src.x += SKIN_BUBBLE_LEFT_WIDTH;
-	dest.x += SKIN_BUBBLE_LEFT_WIDTH;
 
-	// draw middle of the bubble
-	width_left = text->w - (SKIN_BUBBLE_TEXT_WIDTH - SKIN_BUBBLE_MIDDLE_WIDTH);
+	// draw left end of the expandable sprite
+	src.x = 0; src.y = 0;
+	src.w = s->left_width;
+	src.h = s->height;
+	SDL_BlitSurface(s->surface, &src, surf_screen, &dest); // changes dest if clipping happens
+	src.x += s->left_width;
+	x += s->left_width;
+	dest.x = x;
+
+	// draw middle of the expandable sprite
+	width_left = capacity - (s->capacity);
 	while(width_left > 0) {
-		w = MIN(width_left, SKIN_BUBBLE_MIDDLE_WIDTH);
+		w = MIN(width_left, s->middle_width);
 		src.w = w;
-		SDL_BlitSurface(i_bubble, &src, surf_screen, &dest);
-		dest.x += w;
+		SDL_BlitSurface(s->surface, &src, surf_screen, &dest); // changes dest if clipping happens
+		x += w;
+		dest.x = x;
 		width_left -= w;
 	}
 
-	// draw the right end of the bubble
-	src.x += SKIN_BUBBLE_MIDDLE_WIDTH;
-	src.w = SKIN_BUBBLE_RIGHT_WIDTH;
-	SDL_BlitSurface(i_bubble, &src, surf_screen, &dest);
+	// draw the right end of the expandable sprite
+	src.x += s->middle_width;
+	src.w = s->width - s->left_width - s->middle_width;
+	SDL_BlitSurface(s->surface, &src, surf_screen, &dest);
+}
+
+void
+draw_text_sprite(int x, int y, sprite* s, SDL_Surface* text) {
+	SDL_Rect dest;
+
+	draw_expanding_sprite(x, y, text->w, s);
 
 	// draw the text
-	dest.x = x + SKIN_BUBBLE_TEXT_INDENT_X;
-	dest.y = y + SKIN_BUBBLE_TEXT_INDENT_Y;
+	dest.x = x + s->text_indent_x;
+	dest.y = y + s->text_indent_y;
 	SDL_BlitSurface(text, NULL, surf_screen, &dest);
+}
+
+void
+draw_expand_left(sprite* s, SDL_Surface* text) {
+	draw_text_sprite(
+		s->left + s->capacity - text->w + s->middle_width,
+		s->top,
+		s,
+		text);
+}
+
+void
+draw_bubble(sprite *target, SDL_Surface* text) {
+	draw_text_sprite(
+		target->left + (target->width / 2) + SKIN_BUBBLE_REL_X,
+		target->top + SKIN_BUBBLE_REL_Y,
+		&g_bubble_sprite,
+		text);
 }
 
 
@@ -528,11 +696,9 @@ draw() {
 	}
 
 	if(g_mouse_over == OVER_SAVE) {
-		dest.x = SKIN_SAVE_OVER_LEFT; dest.y = SKIN_SAVE_OVER_TOP;
-		SDL_BlitSurface(i_save_over, NULL, surf_screen, &dest);
+		draw_expand_left(&g_save_over_sprite, i_txt_save);
 	} else {
-		dest.x = SKIN_SAVE_LEFT; dest.y = SKIN_SAVE_TOP;
-		SDL_BlitSurface(i_save, NULL, surf_screen, &dest);
+		draw_expand_left(&g_save_sprite, i_txt_save);
 	}
 
 	for(i = 0; i < 4; ++i) {
@@ -575,22 +741,22 @@ draw() {
 
 	switch(g_mouse_over) {
 		case OVER_TRASH:
-			draw_bubble(SKIN_TRASH_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_trash);
+			draw_bubble(&g_trash_sprite, i_txt_bubble_trash);
 		break;
 		case OVER_STAR_1:
-			draw_bubble(SKIN_STAR_1_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_1);
+			draw_bubble(&g_star_1_sprite, i_txt_bubble_1);
 		break;
 		case OVER_STAR_2:
-			draw_bubble(SKIN_STAR_2_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_2);
+			draw_bubble(&g_star_2_sprite, i_txt_bubble_2);
 		break;
 		case OVER_STAR_3:
-			draw_bubble(SKIN_STAR_3_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_3);
+			draw_bubble(&g_star_3_sprite, i_txt_bubble_3);
 		break;
 		case OVER_STAR_4:
-			draw_bubble(SKIN_STAR_4_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_4);
+			draw_bubble(&g_star_4_sprite, i_txt_bubble_4);
 		break;
 		case OVER_STAR_5:
-			draw_bubble(SKIN_STAR_5_LEFT, SKIN_BUBBLE_TOP, i_txt_bubble_5);
+			draw_bubble(&g_star_5_sprite, i_txt_bubble_5);
 		break;
 	}
 
@@ -631,6 +797,16 @@ load_skin() {
 	i_pause_over = load_image(SKIN_PREFIX"pause_over.png");
 	i_play_over = load_image(SKIN_PREFIX"play_over.png");
 	i_bubble = load_image(SKIN_PREFIX"bubble.png");
+
+	g_bubble_sprite.surface = i_bubble;
+	g_save_sprite.surface   = i_save;
+	g_save_over_sprite.surface   = i_save_over;
+	g_trash_sprite.surface = i_star;
+	g_star_1_sprite.surface = i_star;
+	g_star_2_sprite.surface = i_star;
+	g_star_3_sprite.surface = i_star;
+	g_star_4_sprite.surface = i_star;
+	g_star_5_sprite.surface = i_star;
 }
 
 void
@@ -699,8 +875,8 @@ mouse_moved() {
 	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_NEXT_LEFT, SKIN_NEXT_TOP,
 	                                          SKIN_NEXT_WIDTH, SKIN_NEXT_HEIGHT)) {
 		mouse_over = OVER_NEXT;
-	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_SAVE_LEFT, SKIN_SAVE_TOP,
-	                                          SKIN_SAVE_WIDTH, SKIN_SAVE_HEIGHT)) {
+	} else if(within_2d(g_mouse_x, g_mouse_y, g_skin_save_left, SKIN_SAVE_TOP,
+	                                          g_skin_save_width, SKIN_SAVE_HEIGHT)) {
 		mouse_over = OVER_SAVE;
 	} else if(within_2d(g_mouse_x, g_mouse_y, SKIN_BAR_LEFT, SKIN_SLIDER_TOP,
 	                                          SKIN_BAR_WIDTH, SKIN_SLIDER_HEIGHT)) {
@@ -898,12 +1074,16 @@ text_init() {
 
 	g_artist_font = font_init("FreeSerif.ttf", 18);
 
-	i_txt_bubble_trash = text_to_surface(TRANSLATE("Delete immediately!!!"));
+	i_txt_bubble_trash = text_to_surface(TRANSLATE("Delete now."));
 	i_txt_bubble_1 = text_to_surface(TRANSLATE("Feh!"));
 	i_txt_bubble_2 = text_to_surface(TRANSLATE("OK."));
-	i_txt_bubble_3 = text_to_surface(TRANSLATE("Nice"));
+	i_txt_bubble_3 = text_to_surface(TRANSLATE("Nice."));
 	i_txt_bubble_4 = text_to_surface(TRANSLATE("Good stuff!"));
 	i_txt_bubble_5 = text_to_surface(TRANSLATE("I love it!"));
+
+	i_txt_save = text_to_surface(TRANSLATE("Save"));
+	g_skin_save_left = SKIN_SAVE_LEFT + SKIN_SAVE_TEXT_WIDTH - i_txt_save->w;
+	g_skin_save_width = SKIN_SAVE_WIDTH + (SKIN_SAVE_LEFT - g_skin_save_left);
 }
 
 void
